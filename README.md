@@ -22,6 +22,8 @@ This project demonstrates:
 - Safe handling of **stateful transactions**
 - **Correctness** under retries and race conditions
 
+Planned database schema: `db_schema.md`.
+
 ## Architecture:
 
             ┌───────────────────────┐
