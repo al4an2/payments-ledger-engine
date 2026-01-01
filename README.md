@@ -24,6 +24,18 @@ This project demonstrates:
 
 Planned database schema: `db_schema.md`.
 
+## Current State (WIP)
+- Docs: `db_schema.md`, `design.md`, `changelog.md`.
+- Infrastructure: `docker-compose.yaml`, `.env`.
+- Data layer: `data_models/db_models.py`, `app_config/config.py`.
+- Migrations: `alembic.ini`, `alembic/`, `alembic/versions/`.
+- Tooling: `pyproject.toml`, `uv.lock`.
+
+## What Exists Today
+- Postgres runs via Docker Compose for local development.
+- SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
+- Alembic is initialized with a baseline migration.
+
 ## Architecture:
 
             ┌───────────────────────┐
