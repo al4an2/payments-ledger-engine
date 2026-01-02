@@ -2,6 +2,8 @@ from fastapi import FastAPI, Header
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
+from payments_ledger.config.logging import logger
+
 app = FastAPI()
 
 class PaymentRequest(BaseModel):
@@ -27,8 +29,9 @@ async def read_root():
 
 
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
-async def read_item( payload: PaymentRequest,  idempotency_key: str = Header(..., alias="Idempotency-Key"),
+async def create_payment( payload: PaymentRequest,  idempotency_key: str = Header(..., alias="Idempotency-Key"),
 ):
+    logger.info("payment_request", extra={"account_id": payload.account_id})
     request_id = payload.request_id or str(uuid4())
     signed_amount = payload.amount
     response = PaymentResponse(
