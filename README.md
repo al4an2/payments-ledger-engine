@@ -36,6 +36,38 @@ Planned database schema: `db_schema.md`.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Alembic is initialized with a baseline migration.
 
+## Local Setup
+1) Install dependencies:
+```bash
+uv sync --extra dev
+```
+
+2) Start Postgres:
+```bash
+docker compose up -d
+```
+
+3) Run migrations:
+```bash
+uv run alembic upgrade head
+```
+
+## Migrations
+Create a new revision (autogenerate from ORM models):
+```bash
+uv run alembic revision --autogenerate -m "your message"
+```
+
+Apply migrations:
+```bash
+uv run alembic upgrade head
+```
+
+Check current revision:
+```bash
+uv run alembic current
+```
+
 ## Architecture:
 
             ┌───────────────────────┐
