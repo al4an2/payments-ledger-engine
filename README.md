@@ -24,9 +24,9 @@ This project demonstrates:
 
 Planned database schema: `db_schema.md`.
 
-## Current State (WIP)
+## Current State
 - Docs: `db_schema.md`, `design.md`, `changelog.md`.
-- Infrastructure: `docker-compose.yaml`, `.env`.
+- Infrastructure: `docker-compose.yaml`.
 - Data layer: `data_models/db_models.py`, `app_config/config.py`.
 - Migrations: `alembic.ini`, `alembic/`, `alembic/versions/`.
 - Tooling: `pyproject.toml`, `uv.lock`.
