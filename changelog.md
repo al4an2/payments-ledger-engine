@@ -1,5 +1,12 @@
 # Changelog
 
+## v 0.0.2 - 2026-01-02
+- Organized code into `src/payments_ledger/` with api, config, data_models, cache, and ledger modules.
+- Added FastAPI app skeleton with `/health`, `/balance/{account_id}`, and `/payments` endpoints.
+- Added `docs/` directory for schema and design notes.
+- Added `loadgen/` and `tests/` scaffolding directories.
+- Expanded README with local setup and migration instructions.
+
 ## v 0.0.1 - 2026-01-01
 
 - Happy New Year commit
