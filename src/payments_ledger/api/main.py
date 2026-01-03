@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, Depends
 from pydantic import BaseModel, Field
 from uuid import uuid4
+from payments_ledger.api.auth import get_client_id
 
 from payments_ledger.config.logging import logger
+from src.payments_ledger.services.idempotency import handle_payment
 
 app = FastAPI()
 
@@ -34,6 +36,9 @@ async def create_payment( payload: PaymentRequest,  idempotency_key: str = Heade
     logger.info("payment_request", extra={"account_id": payload.account_id})
     request_id = payload.request_id or str(uuid4())
     signed_amount = payload.amount
+
+    handle_payment(payload.cli)
+
     response = PaymentResponse(
         payment_id=str(uuid4()), #tmp generate
         status="COMPLETED",
