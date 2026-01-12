@@ -5,8 +5,8 @@ from payments_ledger.api.auth import get_client_id
 from payments_ledger.db.session import get_session
 
 from payments_ledger.config.logging import logger
-from src.payments_ledger.services.idempotency import reserve_idempotency
-from src.payments_ledger.services.idempotency import make_request_hash
+from payments_ledger.services.idempotency import reserve_idempotency
+from payments_ledger.services.idempotency import make_request_hash
 
 app = FastAPI()
 
@@ -45,7 +45,7 @@ async def create_payment(
 
     request_hash = make_request_hash(payload, client_id, idempotency_key)
 
-    reserve_idempotency(session=session,
+    await reserve_idempotency(session=session,
     client_id=client_id,
     idem_key=idempotency_key,
     request_hash=request_hash)

@@ -1,10 +1,12 @@
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 import json
 import hashlib
+import time
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+from datetime import datetime, timezone
 
 from payments_ledger.data_models.db_models import IdempotencyKey, IdempotencyStatus
-from api import PaymentRequest
+from payments_ledger.api.main import PaymentRequest
 
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
@@ -25,6 +27,7 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
                 idempotency_key=idem_key,
                 request_hash=request_hash,
                 status=IdempotencyStatus.IN_PROGRESS,
+                expires_at=datetime.fromtimestamp(time.time() + 48 * 3600, tz=timezone.utc)
             )
             .on_conflict_do_nothing(
                 index_elements=["client_id", "idempotency_key"]
@@ -55,9 +58,9 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             if row.status == IdempotencyStatus.IN_PROGRESS:
                 raise IdempotencyInProgress()
 
-        return result
+        return "succsess"
     
-def make_request_hash(payload: PaymentRequest) -> str:
+def make_request_hash(payload: PaymentRequest, client_id, idempotency_key) -> str:
     body = payload.model_dump(exclude_none=True)
     body.pop("request_id", None)
     canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
