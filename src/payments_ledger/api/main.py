@@ -43,7 +43,7 @@ async def create_payment(
     request_id = payload.request_id or str(uuid4())
     signed_amount = payload.amount
 
-    request_hash = make_request_hash(payload, client_id, idempotency_key)
+    request_hash = make_request_hash(payload)
 
     await reserve_idempotency(session=session,
     client_id=client_id,

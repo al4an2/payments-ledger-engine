@@ -14,7 +14,7 @@ class IdempotencyConflict(Exception):
         self.code = "IDEMPOTENCY_CONFLICT"
 
 class IdempotencyInProgress(Exception):
-    def __init__(self, message="Idempotency key is already in progress"):
+    def __init__(self, message= "Idempotency key is already in progress"):
         super().__init__(message)
         self.code = "IDEMPOTENCY_IN_PROGRESS"
 
@@ -60,7 +60,7 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
 
         return "succsess"
     
-def make_request_hash(payload: PaymentRequest, client_id, idempotency_key) -> str:
+def make_request_hash(payload: PaymentRequest) -> str:
     body = payload.model_dump(exclude_none=True)
     body.pop("request_id", None)
     canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
