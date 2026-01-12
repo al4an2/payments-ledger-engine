@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Header, Depends
-from pydantic import BaseModel, Field
 from uuid import uuid4
 from payments_ledger.api.auth import get_client_id
 from payments_ledger.db.session import get_session
@@ -7,28 +6,18 @@ from payments_ledger.db.session import get_session
 from payments_ledger.config.logging import logger
 from payments_ledger.services.idempotency import reserve_idempotency
 from payments_ledger.services.idempotency import make_request_hash
+from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
 
 app = FastAPI()
 
-class PaymentRequest(BaseModel):
-    account_id: str
-    amount: int = Field(..., description="minor units, positive")
-    currency: str = Field(..., min_length=3, max_length=3)
-    request_id: str | None = None
 
-class PaymentResponse(BaseModel):
-    payment_id: str
-    status: str
-    request_id: str
-    error_code: str | None = None
-    error_message: str | None = None
 
 @app.get("/health")
 async def read_root():
     return {"Hello": "World"}
 
 @app.get("/balance/{account_id}")
-async def read_root():
+async def read_balance():
     return {"Hello": "World"}
 
 
@@ -41,7 +30,7 @@ async def create_payment(
 ):
     logger.info("payment_request", extra={"account_id": payload.account_id})
     request_id = payload.request_id or str(uuid4())
-    signed_amount = payload.amount
+#    signed_amount = payload.amount
 
     request_hash = make_request_hash(payload)
 

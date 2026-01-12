@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime, timezone
 
 from payments_ledger.data_models.db_models import IdempotencyKey, IdempotencyStatus
-from payments_ledger.api.main import PaymentRequest
+from payments_ledger.api.schemas import PaymentRequest
 
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
@@ -58,7 +58,7 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             if row.status == IdempotencyStatus.IN_PROGRESS:
                 raise IdempotencyInProgress()
 
-        return "succsess"
+        return "in_progress"
     
 def make_request_hash(payload: PaymentRequest) -> str:
     body = payload.model_dump(exclude_none=True)
