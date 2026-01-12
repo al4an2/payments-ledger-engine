@@ -1,8 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
+import json
+import hashlib
 
 from payments_ledger.data_models.db_models import IdempotencyKey, IdempotencyStatus
-
+from api import PaymentRequest
 
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
@@ -14,7 +16,7 @@ class IdempotencyInProgress(Exception):
         super().__init__(message)
         self.code = "IDEMPOTENCY_IN_PROGRESS"
 
-async def handle_payment(session, client_id, idem_key, request_hash):
+async def reserve_idempotency(session, client_id, idem_key, request_hash):
     async with session.begin():
         stmt = (
             insert(IdempotencyKey)
@@ -54,3 +56,9 @@ async def handle_payment(session, client_id, idem_key, request_hash):
                 raise IdempotencyInProgress()
 
         return result
+    
+def make_request_hash(payload: PaymentRequest) -> str:
+    body = payload.model_dump(exclude_none=True)
+    body.pop("request_id", None)
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

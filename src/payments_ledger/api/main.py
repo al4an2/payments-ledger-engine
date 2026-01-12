@@ -2,9 +2,11 @@ from fastapi import FastAPI, Header, Depends
 from pydantic import BaseModel, Field
 from uuid import uuid4
 from payments_ledger.api.auth import get_client_id
+from payments_ledger.db.session import get_session
 
 from payments_ledger.config.logging import logger
-from src.payments_ledger.services.idempotency import handle_payment
+from src.payments_ledger.services.idempotency import reserve_idempotency
+from src.payments_ledger.services.idempotency import make_request_hash
 
 app = FastAPI()
 
@@ -31,13 +33,22 @@ async def read_root():
 
 
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
-async def create_payment( payload: PaymentRequest,  idempotency_key: str = Header(..., alias="Idempotency-Key"),
+async def create_payment(
+    payload: PaymentRequest,  
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    client_id: str = Depends(get_client_id),
+    session = Depends(get_session),
 ):
     logger.info("payment_request", extra={"account_id": payload.account_id})
     request_id = payload.request_id or str(uuid4())
     signed_amount = payload.amount
 
-    handle_payment(payload.cli)
+    request_hash = make_request_hash(payload, client_id, idempotency_key)
+
+    reserve_idempotency(session=session,
+    client_id=client_id,
+    idem_key=idempotency_key,
+    request_hash=request_hash)
 
     response = PaymentResponse(
         payment_id=str(uuid4()), #tmp generate
