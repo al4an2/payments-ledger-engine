@@ -6,6 +6,8 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
+**Current status**: Design-complete, implementation in progress
+
 ## Project Goal
 
 Build a service that:
