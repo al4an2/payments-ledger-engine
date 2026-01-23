@@ -1,8 +1,7 @@
 from sqlalchemy import (
-    Column, String, BigInteger, JSON, DateTime, Enum, ForeignKey, UniqueConstraint, Integer
+    Column, String, BigInteger, JSON, DateTime, Enum, ForeignKey, UniqueConstraint, Integer, text
 )
 from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime, timezone
 import enum
 
 Base = declarative_base()
@@ -20,9 +19,9 @@ class Client(Base):
 
     client_id = Column(String, primary_key=True)
     name = Column(String, nullable=True)
-    api_key_hash = Column(String, nullable=False)
+    api_key_hash = Column(String, unique=True)
     status = Column(Enum(ClientStatus), default=ClientStatus.ACTIVE)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
 
     # Optional relationship; lazy="selectin" avoids N+1
     accounts = relationship("Account", back_populates="client", lazy="selectin")
@@ -40,10 +39,10 @@ class Account(Base):
 
     account_id = Column(String, primary_key=True)
     client_id = Column(String, ForeignKey("clients.client_id"), nullable=False)
-    ledger_version = Column(BigInteger, nullable=False, default=0)
+    ledger_version = Column(BigInteger, nullable=False, server_default="0")
     balance_type = Column(Enum(BalanceType), nullable=False)
     credit_limit = Column(BigInteger, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
 
     client = relationship("Client", back_populates="accounts", lazy="selectin")
     ledger_entries = relationship("LedgerEntry", back_populates="account", lazy="selectin")
@@ -67,7 +66,7 @@ class LedgerEntry(Base):
     currency = Column(String, nullable=False)
     entry_type = Column(Enum(EntryType), nullable=False)
     request_id = Column(String, nullable=False)  # trace to idempotency key / request
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
 
     account = relationship("Account", back_populates="ledger_entries", lazy="selectin")
 
@@ -90,7 +89,7 @@ class IdempotencyKey(Base):
     request_hash = Column(String, nullable=False)
     response_payload = Column(JSON, nullable=True)
     status = Column(Enum(IdempotencyStatus), nullable=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
+    expires_at = Column(DateTime(timezone=True), nullable=False)
 
     client = relationship("Client", lazy="selectin")
