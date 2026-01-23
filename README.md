@@ -31,15 +31,16 @@ Planned database schema: `db_schema.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments`.
 - Services: payment orchestration + idempotency reserve/complete.
-- Data layer: SQLAlchemy models in `src/payments_ledger/data_models/`.
+- Data layer: SQLAlchemy 2.0 typed ORM models in `src/payments_ledger/data_models/`.
 - Migrations: `alembic.ini`, `alembic/`, `alembic/versions/`.
-- Tooling: `pyproject.toml`, `uv.lock`.
+- Tooling: `pyproject.toml`, `uv.lock` (ruff, mypy, bandit).
 
 ## What Exists Today
 - Postgres runs via Docker Compose for local development.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
 - Idempotency service (reserve/complete) stores response payloads for exact retries.
+- Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
 - Payments service orchestrates idempotency + (stub) ledger logic.
 - FastAPI app with auth stub (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Alembic initialized with baseline migration.
@@ -106,6 +107,23 @@ uv run pytest
 Notes:
 - If you don’t want to create a separate database, you can point `TEST_DATABASE_URL` to the same DB. Tests will still use an isolated schema.
 - Tables are created via ORM metadata for tests (not Alembic).
+
+## Code Quality
+Run lint + format:
+```bash
+uv run ruff check .
+uv run ruff format .
+```
+
+Run type checks:
+```bash
+uv run mypy src
+```
+
+Optional security scan:
+```bash
+uv run bandit -r src -x tests,alembic/versions
+```
 
 ## Architecture:
 

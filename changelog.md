@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.24 - 2026-01-23
+- Switched ORM models to SQLAlchemy 2.0 typed style (Mapped, DeclarativeBase).
+- Added idempotency TTL handling via `expires_at`.
+- Added ruff + mypy + bandit tooling and configuration notes.
+
 ## v 0.0.23 - 2026-01-23
 - Added pytest setup with async fixtures and isolated test schema.
 - Added idempotency and payments service tests.
