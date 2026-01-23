@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Design-complete, implementation in progress
+**Current status**: Core API + idempotency flow working, ledger engine stub in progress
 
 ## Project Goal
 
@@ -27,16 +27,22 @@ This project demonstrates:
 Planned database schema: `db_schema.md`.
 
 ## Current State
-- Docs: `db_schema.md`, `design.md`, `changelog.md`.
-- Infrastructure: `docker-compose.yaml`.
-- Data layer: `data_models/db_models.py`, `app_config/config.py`.
+- Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
+- Infrastructure: `docker-compose.yaml`, `.env`.
+- API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments`.
+- Services: payment orchestration + idempotency reserve/complete.
+- Data layer: SQLAlchemy models in `src/payments_ledger/data_models/`.
 - Migrations: `alembic.ini`, `alembic/`, `alembic/versions/`.
 - Tooling: `pyproject.toml`, `uv.lock`.
 
 ## What Exists Today
 - Postgres runs via Docker Compose for local development.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
-- Alembic is initialized with a baseline migration.
+- Async DB session setup + config helpers for DB URLs.
+- Idempotency service (reserve/complete) stores response payloads for exact retries.
+- Payments service orchestrates idempotency + (stub) ledger logic.
+- FastAPI app with auth stub (API key → client_id) and PaymentRequest/PaymentResponse schemas.
+- Alembic initialized with baseline migration.
 
 ## Local Setup
 1) Install dependencies:
@@ -52,6 +58,20 @@ docker compose up -d
 3) Run migrations:
 ```bash
 uv run alembic upgrade head
+```
+
+4) Run API (development):
+```bash
+uv run uvicorn payments_ledger.api.main:app --reload --app-dir src
+```
+
+5) Example request:
+```bash
+curl -X POST "http://127.0.0.1:8000/payments" \
+  -H "Authorization: Bearer <api_key>" \
+  -H "Idempotency-Key: idem-001" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":"acc_1","amount":1000,"currency":"EUR","request_id":"req-1"}'
 ```
 
 ## Migrations
@@ -84,15 +104,15 @@ uv run alembic current
         │ - request validation              │
         │ - idempotency key extraction      │
         │ - auth (stub)                     │
+        │ - calls service layer             │
         └───────────────────────────────────┘
                         │
                         ▼
         ┌───────────────────────────────┐
-        │   Idempotency & Cache Layer   │
-        │ - dedup index (TTL)           │
+        │     Service / Idempotency     │
+        │ - reserve/complete            │
         │ - stored responses            │
-        │ - L1 in-process cache         │
-        │ - L2 Redis (phase 2)          │
+        │ - dedup index (TTL)           │
         └───────────────────────────────┘
                         │
                         ▼

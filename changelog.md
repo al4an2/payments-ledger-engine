@@ -1,5 +1,11 @@
 # Changelog
 
+## v 0.0.22 - 2026-01-23
+- Wired payment orchestration with idempotency reserve/complete flow.
+- Persisted PaymentResponse payloads for idempotent retries.
+- Added API schemas (PaymentRequest/PaymentResponse) and request hashing.
+- Enabled async DB session usage in services and API dependencies.
+
 ## v 0.0.21 - 2026-01-03
 - Added idempotency service with optimistic insert and conflict handling.
 - Added API auth helper for API key lookup.
