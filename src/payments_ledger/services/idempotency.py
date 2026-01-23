@@ -9,40 +9,46 @@ from dataclasses import dataclass
 from payments_ledger.data_models.db_models import IdempotencyKey, IdempotencyStatus
 from payments_ledger.api.schemas import PaymentRequest
 
+
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
         super().__init__(message)
         self.code = "IDEMPOTENCY_CONFLICT"
 
+
 class IdempotencyInProgress(Exception):
-    def __init__(self, message= "Idempotency key is already in progress"):
+    def __init__(self, message="Idempotency key is already in progress"):
         super().__init__(message)
         self.code = "IDEMPOTENCY_IN_PROGRESS"
+
 
 @dataclass
 class IdemResult:
     state: Literal["reserved", "duplicate", "completed"]
     response: dict | None = None
 
-async def _reset_to_in_progress(session, client_id,idem_key, request_hash, new_expires_at) -> IdemResult:
+
+async def _reset_to_in_progress(
+    session, client_id, idem_key, request_hash, new_expires_at
+) -> IdemResult:
     await session.execute(
-                    update(IdempotencyKey)
-                    .where(
-                        IdempotencyKey.client_id == client_id,
-                        IdempotencyKey.idempotency_key == idem_key,
-                    )
-                    .values(
-                        request_hash=request_hash,
-                        status=IdempotencyStatus.IN_PROGRESS,
-                        response_payload=None,
-                        expires_at=new_expires_at,
-                    )
-                )
-    
+        update(IdempotencyKey)
+        .where(
+            IdempotencyKey.client_id == client_id,
+            IdempotencyKey.idempotency_key == idem_key,
+        )
+        .values(
+            request_hash=request_hash,
+            status=IdempotencyStatus.IN_PROGRESS,
+            response_payload=None,
+            expires_at=new_expires_at,
+        )
+    )
+
     return IdemResult("reserved")
 
-async def reserve_idempotency(session, client_id, idem_key, request_hash):
 
+async def reserve_idempotency(session, client_id, idem_key, request_hash):
     now = datetime.now(timezone.utc)
     new_expires_at = now + timedelta(hours=48)
 
@@ -53,16 +59,14 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             idempotency_key=idem_key,
             request_hash=request_hash,
             status=IdempotencyStatus.IN_PROGRESS,
-            expires_at=new_expires_at
+            expires_at=new_expires_at,
         )
-        .on_conflict_do_nothing(
-            index_elements=["client_id", "idempotency_key"]
-        )
+        .on_conflict_do_nothing(index_elements=["client_id", "idempotency_key"])
         .returning(IdempotencyKey.client_id)
     )
     result = await session.execute(stmt)
     inserted = result.scalar_one_or_none()
-    
+
     if not inserted:
         row = (
             await session.execute(
@@ -79,9 +83,11 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             if row.request_hash != request_hash:
                 raise IdempotencyConflict()
             return IdemResult("duplicate", row.response_payload)
-    
+
         if row.expires_at and row.expires_at <= now:
-            return await _reset_to_in_progress(session, client_id,idem_key, request_hash, new_expires_at)
+            return await _reset_to_in_progress(
+                session, client_id, idem_key, request_hash, new_expires_at
+            )
 
         if row.request_hash != request_hash:
             raise IdempotencyConflict()
@@ -94,13 +100,14 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
 
     return IdemResult("reserved")
 
+
 async def complete_idempotency(session, client_id, idem_key, response):
     stmt = (
         update(IdempotencyKey)
         .where(
             IdempotencyKey.client_id == client_id,
             IdempotencyKey.idempotency_key == idem_key,
-            IdempotencyKey.status == IdempotencyStatus.IN_PROGRESS
+            IdempotencyKey.status == IdempotencyStatus.IN_PROGRESS,
         )
         .values(
             status=IdempotencyStatus.COMPLETED,
@@ -112,27 +119,27 @@ async def complete_idempotency(session, client_id, idem_key, response):
     if result.rowcount == 0:
         row = (
             await session.execute(
-                select(IdempotencyKey)
-                .where(
+                select(IdempotencyKey).where(
                     IdempotencyKey.client_id == client_id,
                     IdempotencyKey.idempotency_key == idem_key,
                 )
             )
         ).scalar_one_or_none()
-        
+
         if row is None:
             raise RuntimeError("Idempotency complete failed: not_exist")
-    
+
         if row.status == IdempotencyStatus.COMPLETED:
             return IdemResult("duplicate", row.response_payload)
 
         if row.status == IdempotencyStatus.FAILED:
             return IdemResult("duplicate", row.response_payload)
-        
+
         raise RuntimeError("Unexpected error")
 
     return IdemResult("completed")
-    
+
+
 def make_request_hash(payload: PaymentRequest) -> str:
     body = payload.model_dump(exclude_none=True)
     body.pop("request_id", None)

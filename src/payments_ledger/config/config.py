@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def _get_db_params() -> str:
     user = getenv("POSTGRES_USER", "postgres")
     password = getenv("POSTGRES_PASSWORD", "postgres")
@@ -11,11 +12,12 @@ def _get_db_params() -> str:
     db = getenv("POSTGRES_DB", "postgres")
     return user, password, host, port, db
 
+
 def get_sync_db_url() -> str:
     user, password, host, port, db = _get_db_params()
     return f"postgresql+psycopg://{user}:{password}@{host}:{port}/{db}"
 
+
 def get_async_db_url() -> str:
     user, password, host, port, db = _get_db_params()
     return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
-

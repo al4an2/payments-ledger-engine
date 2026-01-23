@@ -16,9 +16,11 @@ app = FastAPI()
 async def handle_idempotency_conflict(request: Request, exc: IdempotencyConflict):
     return JSONResponse(status_code=409, content={"detail": exc.code})
 
+
 @app.exception_handler(IdempotencyInProgress)
 async def handle_idempotency_in_progress(request: Request, exc: IdempotencyInProgress):
     return JSONResponse(status_code=409, content={"detail": exc.code})
+
 
 @app.exception_handler(Exception)
 async def handle_unexpected(request: Request, exc: Exception):
@@ -29,6 +31,7 @@ async def handle_unexpected(request: Request, exc: Exception):
 async def read_root():
     return {"Hello": "200"}
 
+
 @app.get("/balance/{account_id}")
 async def read_balance():
     return {"Hello": "Get your balance"}
@@ -36,23 +39,23 @@ async def read_balance():
 
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
 async def create_payment(
-    payload: PaymentRequest,  
+    payload: PaymentRequest,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     client_id: str = Depends(get_client_id),
-    session = Depends(get_session, use_cache=False),
+    session=Depends(get_session, use_cache=False),
 ):
     request_id = payload.request_id or str(uuid4())
-    logger.info("payment_request", extra={"account_id": payload.account_id, "request_id": request_id})
-#    signed_amount = payload.amount
-
+    logger.info(
+        "payment_request", extra={"account_id": payload.account_id, "request_id": request_id}
+    )
+    #    signed_amount = payload.amount
 
     result = await process_payment(
-        session=session,           
+        session=session,
         client_id=client_id,
         idempotency_key=idempotency_key,
         payload=payload,
-        request_id=request_id
+        request_id=request_id,
     )
-
 
     return PaymentResponse(**result)

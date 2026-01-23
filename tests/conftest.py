@@ -9,6 +9,7 @@ from sqlalchemy.pool import NullPool
 
 from payments_ledger.data_models.db_models import Base
 
+
 @pytest.fixture(scope="session")
 def test_db_url() -> str:
     url = os.getenv("TEST_DATABASE_URL")

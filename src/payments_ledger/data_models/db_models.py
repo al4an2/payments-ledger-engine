@@ -1,10 +1,20 @@
 from sqlalchemy import (
-    Column, String, BigInteger, JSON, DateTime, Enum, ForeignKey, UniqueConstraint, Integer, text
+    Column,
+    String,
+    BigInteger,
+    JSON,
+    DateTime,
+    Enum,
+    ForeignKey,
+    UniqueConstraint,
+    Integer,
+    text,
 )
 from sqlalchemy.orm import declarative_base, relationship
 import enum
 
 Base = declarative_base()
+
 
 # ----------------------
 # Client
@@ -13,6 +23,7 @@ class ClientStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
     DELETED = "DELETED"
+
 
 class Client(Base):
     __tablename__ = "clients"
@@ -34,6 +45,7 @@ class BalanceType(enum.Enum):
     DEBIT_ONLY = "DEBIT_ONLY"
     CREDIT_ALLOWED = "CREDIT_ALLOWED"
 
+
 class Account(Base):
     __tablename__ = "accounts"
 
@@ -54,6 +66,7 @@ class Account(Base):
 class EntryType(enum.Enum):
     DEBIT = "DEBIT"
     CREDIT = "CREDIT"
+
 
 class LedgerEntry(Base):
     __tablename__ = "ledger_entries"
@@ -78,6 +91,7 @@ class IdempotencyStatus(enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
 
 class IdempotencyKey(Base):
     __tablename__ = "idempotency_keys"
