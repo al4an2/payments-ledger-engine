@@ -90,6 +90,23 @@ Check current revision:
 uv run alembic current
 ```
 
+## Testing
+Tests use a **separate test database URL** and create a **temporary schema** per test run, so your real tables are not touched.
+
+1) Set a test DB URL (prefer a dedicated DB):
+```bash
+export TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/payments_ledger_test"
+```
+
+2) Run tests:
+```bash
+uv run pytest
+```
+
+Notes:
+- If you don’t want to create a separate database, you can point `TEST_DATABASE_URL` to the same DB. Tests will still use an isolated schema.
+- Tables are created via ORM metadata for tests (not Alembic).
+
 ## Architecture:
 
             ┌───────────────────────┐

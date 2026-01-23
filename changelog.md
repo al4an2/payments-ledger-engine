@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.23 - 2026-01-23
+- Added pytest setup with async fixtures and isolated test schema.
+- Added idempotency and payments service tests.
+- Documented testing workflow and TEST_DATABASE_URL usage.
+
 ## v 0.0.22 - 2026-01-23
 - Wired payment orchestration with idempotency reserve/complete flow.
 - Persisted PaymentResponse payloads for idempotent retries.
