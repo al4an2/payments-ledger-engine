@@ -1,10 +1,9 @@
 import json
 import hashlib
-import time
 from typing import Literal
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 
 from payments_ledger.data_models.db_models import IdempotencyKey, IdempotencyStatus
@@ -25,7 +24,28 @@ class IdemResult:
     state: Literal["reserved", "duplicate", "completed"]
     response: dict | None = None
 
+async def _reset_to_in_progress(session, client_id,idem_key, request_hash, new_expires_at) -> IdemResult:
+    await session.execute(
+                    update(IdempotencyKey)
+                    .where(
+                        IdempotencyKey.client_id == client_id,
+                        IdempotencyKey.idempotency_key == idem_key,
+                    )
+                    .values(
+                        request_hash=request_hash,
+                        status=IdempotencyStatus.IN_PROGRESS,
+                        response_payload=None,
+                        expires_at=new_expires_at,
+                    )
+                )
+    
+    return IdemResult("reserved")
+
 async def reserve_idempotency(session, client_id, idem_key, request_hash):
+
+    now = datetime.now(timezone.utc)
+    new_expires_at = now + timedelta(hours=48)
+
     stmt = (
         insert(IdempotencyKey)
         .values(
@@ -33,7 +53,7 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             idempotency_key=idem_key,
             request_hash=request_hash,
             status=IdempotencyStatus.IN_PROGRESS,
-            expires_at=datetime.fromtimestamp(time.time() + 48 * 3600, tz=timezone.utc)
+            expires_at=new_expires_at
         )
         .on_conflict_do_nothing(
             index_elements=["client_id", "idempotency_key"]
@@ -55,11 +75,16 @@ async def reserve_idempotency(session, client_id, idem_key, request_hash):
             )
         ).scalar_one()
 
+        if row.status == IdempotencyStatus.COMPLETED:
+            if row.request_hash != request_hash:
+                raise IdempotencyConflict()
+            return IdemResult("duplicate", row.response_payload)
+    
+        if row.expires_at and row.expires_at <= now:
+            return await _reset_to_in_progress(session, client_id,idem_key, request_hash, new_expires_at)
+
         if row.request_hash != request_hash:
             raise IdempotencyConflict()
-        
-        if row.status == IdempotencyStatus.COMPLETED:
-            return IdemResult("duplicate", row.response_payload)
 
         if row.status == IdempotencyStatus.IN_PROGRESS:
             raise IdempotencyInProgress()
