@@ -44,6 +44,7 @@ exclude = ["alembic/versions/*.py"]
 
 [tool.mypy]
 python_version = "3.12"
+exclude = ["alembic/versions/*.py"]
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 ignore_missing_imports = true
 warn_unused_ignores = true

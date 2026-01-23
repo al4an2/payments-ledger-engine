@@ -4,8 +4,8 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from src.payments_ledger.data_models.db_models import Base  # где Base = declarative_base()
-from src.payments_ledger.config.config import get_sync_db_url
+from payments_ledger.data_models.db_models import Base  # где Base = declarative_base()
+from payments_ledger.config.config import get_sync_db_url
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

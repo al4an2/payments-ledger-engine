@@ -3,6 +3,7 @@ import uuid
 
 import pytest
 import pytest_asyncio
+from typing import cast
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -15,7 +16,7 @@ def test_db_url() -> str:
     url = os.getenv("TEST_DATABASE_URL")
     if not url:
         pytest.skip("TEST_DATABASE_URL not set")
-    return url
+    return cast(str, url)
 
 
 @pytest_asyncio.fixture(scope="session")
