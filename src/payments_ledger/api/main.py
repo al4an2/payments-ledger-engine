@@ -4,9 +4,8 @@ from payments_ledger.api.auth import get_client_id
 from payments_ledger.db.session import get_session
 
 from payments_ledger.config.logging import logger
-from payments_ledger.services.idempotency import reserve_idempotency
-from payments_ledger.services.idempotency import make_request_hash
 from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
+from payments_ledger.services.payments import process_payment
 
 app = FastAPI()
 
@@ -14,11 +13,11 @@ app = FastAPI()
 
 @app.get("/health")
 async def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "200"}
 
 @app.get("/balance/{account_id}")
 async def read_balance():
-    return {"Hello": "World"}
+    return {"Hello": "Get your balance"}
 
 
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
@@ -28,20 +27,16 @@ async def create_payment(
     client_id: str = Depends(get_client_id),
     session = Depends(get_session),
 ):
-    logger.info("payment_request", extra={"account_id": payload.account_id})
     request_id = payload.request_id or str(uuid4())
+    logger.info("payment_request", extra={"account_id": payload.account_id, "request_id": request_id})
 #    signed_amount = payload.amount
 
-    request_hash = make_request_hash(payload)
-
-    await reserve_idempotency(session=session,
-    client_id=client_id,
-    idem_key=idempotency_key,
-    request_hash=request_hash)
-
-    response = PaymentResponse(
-        payment_id=str(uuid4()), #tmp generate
-        status="COMPLETED",
+    result = await process_payment(
+        session=session,           
+        client_id=client_id,
+        idempotency_key=idempotency_key,
+        payload=payload,
         request_id=request_id
     )
-    return response
+
+    return PaymentResponse(**result)
