@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _get_db_params() -> str:
+def _get_db_params() -> tuple[str, str, str, str, str]:
     user = getenv("POSTGRES_USER", "postgres")
     password = getenv("POSTGRES_PASSWORD", "postgres")
     host = getenv("POSTGRES_HOST", "localhost")

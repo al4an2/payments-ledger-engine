@@ -1,5 +1,4 @@
 from sqlalchemy import (
-    Column,
     String,
     BigInteger,
     JSON,
@@ -10,10 +9,14 @@ from sqlalchemy import (
     Integer,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 import enum
+from datetime import datetime
+from typing import Any
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 # ----------------------
@@ -28,11 +31,13 @@ class ClientStatus(enum.Enum):
 class Client(Base):
     __tablename__ = "clients"
 
-    client_id = Column(String, primary_key=True)
-    name = Column(String, nullable=True)
-    api_key_hash = Column(String, unique=True)
-    status = Column(Enum(ClientStatus), default=ClientStatus.ACTIVE)
-    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
+    client_id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=True)
+    api_key_hash: Mapped[str] = mapped_column(String, unique=True)
+    status: Mapped[ClientStatus] = mapped_column(Enum(ClientStatus), default=ClientStatus.ACTIVE)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     # Optional relationship; lazy="selectin" avoids N+1
     accounts = relationship("Account", back_populates="client", lazy="selectin")
@@ -49,12 +54,14 @@ class BalanceType(enum.Enum):
 class Account(Base):
     __tablename__ = "accounts"
 
-    account_id = Column(String, primary_key=True)
-    client_id = Column(String, ForeignKey("clients.client_id"), nullable=False)
-    ledger_version = Column(BigInteger, nullable=False, server_default="0")
-    balance_type = Column(Enum(BalanceType), nullable=False)
-    credit_limit = Column(BigInteger, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
+    account_id: Mapped[str] = mapped_column(String, primary_key=True)
+    client_id: Mapped[str] = mapped_column(String, ForeignKey("clients.client_id"), nullable=False)
+    ledger_version: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    balance_type: Mapped[BalanceType] = mapped_column(Enum(BalanceType), nullable=False)
+    credit_limit: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     client = relationship("Client", back_populates="accounts", lazy="selectin")
     ledger_entries = relationship("LedgerEntry", back_populates="account", lazy="selectin")
@@ -72,14 +79,20 @@ class LedgerEntry(Base):
     __tablename__ = "ledger_entries"
     __table_args__ = (UniqueConstraint("account_id", "ledger_version"),)
 
-    entry_id = Column(BigInteger, primary_key=True, autoincrement=True)
-    account_id = Column(String, ForeignKey("accounts.account_id"), nullable=False)
-    ledger_version = Column(BigInteger, nullable=False)
-    amount = Column(BigInteger, nullable=False)
-    currency = Column(String, nullable=False)
-    entry_type = Column(Enum(EntryType), nullable=False)
-    request_id = Column(String, nullable=False)  # trace to idempotency key / request
-    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
+    entry_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    account_id: Mapped[str] = mapped_column(
+        String, ForeignKey("accounts.account_id"), nullable=False
+    )
+    ledger_version: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(String, nullable=False)
+    entry_type: Mapped[EntryType] = mapped_column(Enum(EntryType), nullable=False)
+    request_id: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # trace to idempotency key / request
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
 
     account = relationship("Account", back_populates="ledger_entries", lazy="selectin")
 
@@ -97,13 +110,15 @@ class IdempotencyKey(Base):
     __tablename__ = "idempotency_keys"
     __table_args__ = (UniqueConstraint("client_id", "idempotency_key"),)
 
-    idempotency_id = Column(Integer, primary_key=True, autoincrement=True)
-    client_id = Column(String, ForeignKey("clients.client_id"), nullable=False)
-    idempotency_key = Column(String, nullable=False)
-    request_hash = Column(String, nullable=False)
-    response_payload = Column(JSON, nullable=True)
-    status = Column(Enum(IdempotencyStatus), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=text("now()"))
-    expires_at = Column(DateTime(timezone=True), nullable=False)
+    idempotency_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    client_id: Mapped[str] = mapped_column(String, ForeignKey("clients.client_id"), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String, nullable=False)
+    request_hash: Mapped[str] = mapped_column(String, nullable=False)
+    response_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    status: Mapped[IdempotencyStatus] = mapped_column(Enum(IdempotencyStatus), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     client = relationship("Client", lazy="selectin")

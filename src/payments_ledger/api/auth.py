@@ -16,8 +16,8 @@ async def get_client_id(
     token_hash = hashlib.sha256(token.encode()).hexdigest()
 
     result = await session.execute(select(Client).where(Client.api_key_hash == token_hash))
-    client = result.scalar_one_or_none()
+    client: Client | None = result.scalar_one_or_none()
     if not client:
         raise HTTPException(status_code=401, detail="Invalid api key")
 
-    return client.client_id
+    return str(client.client_id)

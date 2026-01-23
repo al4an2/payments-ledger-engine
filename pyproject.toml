@@ -31,6 +31,21 @@ asyncio_mode = "auto"
 [tool.ruff.format]
 exclude = ["alembic/versions/*.py"]
 
+[dependency-groups]
+dev = [
+    "bandit>=1.9.3",
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+]
+
 [tool.ruff]
 line-length = 100
 exclude = ["alembic/versions/*.py"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = true
+pretty = true
