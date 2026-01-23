@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from src.payments_ledger.config.config import get_async_db_url
+from payments_ledger.config.config import get_async_db_url
 
 DATABASE_URL = get_async_db_url()
 

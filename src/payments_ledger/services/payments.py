@@ -1,4 +1,5 @@
-from src.payments_ledger.services.idempotency import make_request_hash, reserve_idempotency, complete_idempotency
+from uuid import uuid4
+from payments_ledger.services.idempotency import make_request_hash, reserve_idempotency, complete_idempotency
 
 
 async def process_payment(session, client_id, idempotency_key, payload, request_id):
@@ -16,11 +17,20 @@ async def process_payment(session, client_id, idempotency_key, payload, request_
 
         ##payment_process
 
-        await complete_idempotency(
+        response = {
+            "payment_id": str(uuid4()),
+            "status": "COMPLETED",
+            "request_id": request_id,
+        }
+
+        idem_result = await complete_idempotency(
             session=session,
             client_id=client_id,
             idem_key=idempotency_key,
-            response="result", ##tpm
+            response=response, ##tpm
         )
 
-        return idem_result
+        if idem_result.state == "duplicate":
+            return idem_result.response
+
+        return response

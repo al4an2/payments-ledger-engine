@@ -1,12 +1,12 @@
 import hashlib
 from fastapi import Header, HTTPException, Depends
 from sqlalchemy import select
-from src.payments_ledger.db.session import get_session
-from src.payments_ledger.data_models.db_models import Client
+from payments_ledger.db.session import get_session
+from payments_ledger.data_models.db_models import Client
 
 async def get_client_id(
     authorization: str = Header(...),
-    session = Depends(get_session),
+    session = Depends(get_session, use_cache=False),
 ) -> str:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")

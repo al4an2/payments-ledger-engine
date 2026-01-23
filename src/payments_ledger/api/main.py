@@ -39,7 +39,7 @@ async def create_payment(
     payload: PaymentRequest,  
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     client_id: str = Depends(get_client_id),
-    session = Depends(get_session),
+    session = Depends(get_session, use_cache=False),
 ):
     request_id = payload.request_id or str(uuid4())
     logger.info("payment_request", extra={"account_id": payload.account_id, "request_id": request_id})

@@ -22,7 +22,7 @@ class IdempotencyInProgress(Exception):
 
 @dataclass
 class IdemResult:
-    state: Literal["reserved", "duplicate"]
+    state: Literal["reserved", "duplicate", "completed"]
     response: dict | None = None
 
 async def reserve_idempotency(session, client_id, idem_key, request_hash):
@@ -81,10 +81,6 @@ async def complete_idempotency(session, client_id, idem_key, response):
             status=IdempotencyStatus.COMPLETED,
             response_payload=response,
         )
-        .on_conflict_do_nothing(
-            index_elements=["client_id", "idempotency_key"]
-        )
-        .returning(IdempotencyKey.client_id)
     )
     result = await session.execute(stmt)
 
@@ -110,7 +106,7 @@ async def complete_idempotency(session, client_id, idem_key, response):
         
         raise RuntimeError("Unexpected error")
 
-    return None
+    return IdemResult("completed")
     
 def make_request_hash(payload: PaymentRequest) -> str:
     body = payload.model_dump(exclude_none=True)

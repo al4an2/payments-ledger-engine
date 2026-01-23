@@ -7,7 +7,7 @@ class PaymentRequest(BaseModel):
     request_id: str | None = None
 
 class PaymentResponse(BaseModel):
-    payment_id: str
+    payment_id: str | None = None
     status: str
     request_id: str
     error_code: str | None = None
