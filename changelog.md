@@ -1,5 +1,12 @@
 # Changelog
 
+## v 0.0.25 - 2026-01-24
+- Added clean architecture ports and a SQLAlchemy Unit of Work for DB transactions.
+- Implemented SQLAlchemy adapters for ledger, idempotency, and auth.
+- Implemented ledger domain rules (EntryType/BalanceType, decision logic, invariants).
+- Updated API wiring to use UoW and auth repo.
+- Added/updated tests for auth and idempotency/payment wiring.
+
 ## v 0.0.24 - 2026-01-23
 - Switched ORM models to SQLAlchemy 2.0 typed style (Mapped, DeclarativeBase).
 - Added idempotency TTL handling via `expires_at`.

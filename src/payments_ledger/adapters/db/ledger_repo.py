@@ -22,7 +22,7 @@ class SqlAlchemyLedgerRepo:
             account_id=account_id,
             client_id=str(row.client_id),
             ledger_version=row.ledger_version,
-            balance_type=row.balance_type.value,
+            balance_type=row.balance_type,
             credit_limit=row.credit_limit,
         )
 

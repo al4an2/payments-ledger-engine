@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class PaymentRequest(BaseModel):
     account_id: str
     amount: int = Field(..., description="minor units, positive")
     currency: str = Field(..., min_length=3, max_length=3)
+    direction: Literal["DEBIT", "CREDIT"]
     request_id: str | None = None
 
 

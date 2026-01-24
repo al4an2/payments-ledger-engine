@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Protocol, Literal
-from payments_ledger.ledger_domain.ledger_engine import EntryType
+from payments_ledger.ledger_domain.ledger_engine import EntryType, BalanceType
 
 
 class IdempotencyConflict(Exception):
@@ -32,7 +32,7 @@ class AccountSnapshot:
     account_id: str
     client_id: str
     ledger_version: int
-    balance_type: str
+    balance_type: BalanceType
     credit_limit: int | None
 
 

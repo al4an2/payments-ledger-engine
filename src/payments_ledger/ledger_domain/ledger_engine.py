@@ -32,6 +32,12 @@ class InvalidAccountConfig(Exception):
         self.code = "INVALID_ACCOUNT_CONFIG"
 
 
+class AccountOwnershipError(Exception):
+    def __init__(self, message="Difference owner of the account"):
+        super().__init__(message)
+        self.code = "ACCOUNT_OWNERSHIP_ERROR"
+
+
 class EntryType(enum.Enum):
     DEBIT = "DEBIT"
     CREDIT = "CREDIT"

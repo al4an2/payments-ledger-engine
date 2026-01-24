@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, ledger engine stub in progress
+**Current status**: Core API + idempotency flow working, clean architecture refactor in place, ledger rules + adapters implemented, ledger write-path integration in progress
 
 ## Project Goal
 
@@ -30,8 +30,11 @@ Planned database schema: `db_schema.md`.
 - Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments`.
-- Services: payment orchestration + idempotency reserve/complete.
+- Application: payment orchestration + idempotency reserve/complete via ports.
+- Domain: ledger decision logic (invariants, credit limits, entry types).
+- Adapters: SQLAlchemy repos for idempotency, ledger, and auth.
 - Data layer: SQLAlchemy 2.0 typed ORM models in `src/payments_ledger/data_models/`.
+- Unit of Work: DB transaction boundary in `adapters/db/uow.py`.
 - Migrations: `alembic.ini`, `alembic/`, `alembic/versions/`.
 - Tooling: `pyproject.toml`, `uv.lock` (ruff, mypy, bandit).
 
@@ -39,10 +42,11 @@ Planned database schema: `db_schema.md`.
 - Postgres runs via Docker Compose for local development.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
-- Idempotency service (reserve/complete) stores response payloads for exact retries.
+- Idempotency flow via repo adapter (reserve/complete) stores response payloads for exact retries.
 - Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
-- Payments service orchestrates idempotency + (stub) ledger logic.
-- FastAPI app with auth stub (API key → client_id) and PaymentRequest/PaymentResponse schemas.
+- Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
+- Payments service orchestrates idempotency + (stub) ledger write path integration.
+- FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Alembic initialized with baseline migration.
 
 ## Local Setup
@@ -144,19 +148,21 @@ uv run bandit -r src -x tests,alembic/versions
                         │
                         ▼
         ┌───────────────────────────────┐
-        │     Service / Idempotency     │
-        │ - reserve/complete            │
-        │ - stored responses            │
-        │ - dedup index (TTL)           │
+        │     Services / Ports          │
+        │ - idempotency reserve/complete│
+        │ - ledger orchestration        │
+        │ - domain decisions            │
         └───────────────────────────────┘
                         │
                         ▼
         ┌───────────────────────────────────────┐
-        │           Ledger Engine               │
+        │     Ledger Engine & Adapters / DB     │
         │ - append-only ledger                  │
         │ - per-account serialization           │
         │ - balance versioning                  │
-        │ - invariants (no negative balance)    │
+        │ - invariants                          │
+        │ - SQLAlchemy repos                    │
+        │ - UoW transaction boundary            │
         └───────────────┬───────────────────────┘
                         │
                         ▼

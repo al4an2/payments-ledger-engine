@@ -17,8 +17,12 @@ async def _seed_client(session, client_id: str = "client_1") -> None:
 
 
 def test_make_request_hash_excludes_request_id():
-    req_a = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", request_id="r1")
-    req_b = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", request_id="r2")
+    req_a = PaymentRequest(
+        account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT", request_id="r1"
+    )
+    req_b = PaymentRequest(
+        account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT", request_id="r2"
+    )
     assert make_request_hash(req_a.model_dump(exclude_none=True)) == make_request_hash(
         req_b.model_dump(exclude_none=True)
     )
@@ -29,7 +33,9 @@ async def test_idempotency_duplicate_returns_saved_response(db_session):
     await _seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
-    payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", request_id="r1")
+    payload = PaymentRequest(
+        account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT", request_id="r1"
+    )
     request_hash = make_request_hash(payload.model_dump(exclude_none=True))
     response = {"payment_id": "p1", "status": "COMPLETED", "request_id": "r1"}
 
@@ -51,7 +57,7 @@ async def test_idempotency_in_progress_raises(db_session):
     await _seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
-    payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR")
+    payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT")
     request_hash = make_request_hash(payload.model_dump(exclude_none=True))
 
     async with db_session.begin():
@@ -68,7 +74,7 @@ async def test_idempotency_conflict_raises(db_session):
     await _seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
-    payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR")
+    payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT")
     request_hash = make_request_hash(payload.model_dump(exclude_none=True))
     response = {"payment_id": "p1", "status": "COMPLETED", "request_id": "r1"}
 
@@ -78,7 +84,7 @@ async def test_idempotency_conflict_raises(db_session):
     async with db_session.begin():
         await complete_idempotency(repo, "client_1", "idem-3", response)
 
-    payload_2 = PaymentRequest(account_id="acc_1", amount=2000, currency="EUR")
+    payload_2 = PaymentRequest(account_id="acc_1", amount=2000, currency="EUR", direction="DEBIT")
     request_hash_2 = make_request_hash(payload_2.model_dump(exclude_none=True))
 
     async with db_session.begin():
