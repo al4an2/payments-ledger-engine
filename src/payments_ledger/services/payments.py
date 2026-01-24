@@ -6,14 +6,12 @@ from payments_ledger.services.idempotency import (
 )
 
 
-async def process_payment(
-    idempotency_repo, session, client_id, idempotency_key, payload, request_id
-):
-    request_hash = make_request_hash(payload.model_dump(exclude_none=True))
+async def process_payment(uow, client_id, idempotency_key, payload, request_id):
+    request_hash = make_request_hash(payload)
 
-    async with session.begin():
+    async with uow:
         idem_result = await reserve_idempotency(
-            idempotency_repo,
+            uow.idempotency_repo,
             client_id,
             idempotency_key,
             request_hash,
@@ -31,7 +29,7 @@ async def process_payment(
         }
 
         idem_result = await complete_idempotency(
-            idempotency_repo,
+            uow.idempotency_repo,
             client_id,
             idempotency_key,
             response,  ##tpm
