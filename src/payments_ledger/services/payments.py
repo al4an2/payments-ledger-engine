@@ -6,15 +6,17 @@ from payments_ledger.services.idempotency import (
 )
 
 
-async def process_payment(session, client_id, idempotency_key, payload, request_id):
-    request_hash = make_request_hash(payload)
+async def process_payment(
+    idempotency_repo, session, client_id, idempotency_key, payload, request_id
+):
+    request_hash = make_request_hash(payload.model_dump(exclude_none=True))
 
     async with session.begin():
         idem_result = await reserve_idempotency(
-            session=session,
-            client_id=client_id,
-            idem_key=idempotency_key,
-            request_hash=request_hash,
+            idempotency_repo,
+            client_id,
+            idempotency_key,
+            request_hash,
         )
 
         if idem_result.state == "duplicate":
@@ -29,10 +31,10 @@ async def process_payment(session, client_id, idempotency_key, payload, request_
         }
 
         idem_result = await complete_idempotency(
-            session=session,
-            client_id=client_id,
-            idem_key=idempotency_key,
-            response=response,  ##tpm
+            idempotency_repo,
+            client_id,
+            idempotency_key,
+            response,  ##tpm
         )
 
         if idem_result.state == "duplicate":

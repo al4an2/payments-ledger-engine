@@ -6,10 +6,15 @@ from payments_ledger.db.session import get_session
 
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
-from payments_ledger.services.idempotency import IdempotencyConflict, IdempotencyInProgress
+from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress
 from payments_ledger.services.payments import process_payment
+from payments_ledger.adapters.db.idempotency_repo import SqlAlchemyIdempotencyRepo
 
 app = FastAPI()
+
+
+def get_idempotency_repo(session=Depends(get_session)):
+    return SqlAlchemyIdempotencyRepo(session)
 
 
 @app.exception_handler(IdempotencyConflict)
@@ -44,6 +49,7 @@ async def create_payment(
     client_id: str = Depends(get_client_id),
     session=Depends(get_session, use_cache=False),
 ):
+    idempotency_repo = get_idempotency_repo(session)
     request_id = payload.request_id or str(uuid4())
     logger.info(
         "payment_request", extra={"account_id": payload.account_id, "request_id": request_id}
@@ -51,6 +57,7 @@ async def create_payment(
     #    signed_amount = payload.amount
 
     result = await process_payment(
+        idempotency_repo=idempotency_repo,
         session=session,
         client_id=client_id,
         idempotency_key=idempotency_key,
