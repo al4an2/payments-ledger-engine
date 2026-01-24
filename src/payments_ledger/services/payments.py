@@ -4,9 +4,10 @@ from payments_ledger.services.idempotency import (
     reserve_idempotency,
     complete_idempotency,
 )
+from payments_ledger.services.ports import UnitOfWork
 
 
-async def process_payment(uow, client_id, idempotency_key, payload, request_id):
+async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, request_id):
     request_hash = make_request_hash(payload)
 
     async with uow:

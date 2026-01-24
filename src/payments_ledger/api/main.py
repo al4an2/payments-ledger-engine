@@ -5,7 +5,7 @@ from payments_ledger.api.auth import get_client_id
 
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
-from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress
+from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
 from payments_ledger.services.payments import process_payment
 from payments_ledger.db.session import get_session_factory
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
@@ -47,8 +47,8 @@ async def create_payment(
     payload: PaymentRequest,
     idempotency_key: str = Header(..., alias="Idempotency-Key"),
     client_id: str = Depends(get_client_id),
+    uow: UnitOfWork = Depends(get_uow()),
 ):
-    uow = get_uow()
     request_id = payload.request_id or str(uuid4())
     logger.info(
         "payment_request", extra={"account_id": payload.account_id, "request_id": request_id}
