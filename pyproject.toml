@@ -12,6 +12,7 @@ dependencies = [
   "alembic>=1.17.2",
   "psycopg>=3.3.2",
   "greenlet>=3.3.0",
+  "python-dotenv>=1.2.1"
 ]
 
 [project.optional-dependencies]

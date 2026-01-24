@@ -33,10 +33,14 @@ class Client(Base):
 
     client_id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=True)
-    api_key_hash: Mapped[str] = mapped_column(String, unique=True)
-    status: Mapped[ClientStatus] = mapped_column(Enum(ClientStatus), default=ClientStatus.ACTIVE)
+    api_key_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    status: Mapped[ClientStatus] = mapped_column(
+        Enum(ClientStatus, name="clientstatus"),
+        default=ClientStatus.ACTIVE,
+        server_default=text("'ACTIVE'::clientstatus"),
+    )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
 
     # Optional relationship; lazy="selectin" avoids N+1
@@ -56,11 +60,13 @@ class Account(Base):
 
     account_id: Mapped[str] = mapped_column(String, primary_key=True)
     client_id: Mapped[str] = mapped_column(String, ForeignKey("clients.client_id"), nullable=False)
-    ledger_version: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    ledger_version: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, server_default=text("0")
+    )
     balance_type: Mapped[BalanceType] = mapped_column(Enum(BalanceType), nullable=False)
     credit_limit: Mapped[int] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
 
     client = relationship("Client", back_populates="accounts", lazy="selectin")
@@ -91,7 +97,7 @@ class LedgerEntry(Base):
         String, nullable=False
     )  # trace to idempotency key / request
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
 
     account = relationship("Account", back_populates="ledger_entries", lazy="selectin")
@@ -117,7 +123,7 @@ class IdempotencyKey(Base):
     response_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     status: Mapped[IdempotencyStatus] = mapped_column(Enum(IdempotencyStatus), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("now()")
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
