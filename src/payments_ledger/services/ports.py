@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Protocol, Literal
+from payments_ledger.ledger_domain.ledger_engine import EntryType
 
 
 class IdempotencyConflict(Exception):
@@ -43,7 +44,7 @@ class LedgerRepo(Protocol):
     async def insert_entry(
         self,
         account_id: str,
-        ledger_version: int,
+        ledger_version: EntryType,
         amount: int,
         currency: str,
         entry_type: str,

@@ -14,6 +14,8 @@ import enum
 from datetime import datetime
 from typing import Any
 
+from payments_ledger.ledger_domain.ledger_engine import EntryType
+
 
 class Base(DeclarativeBase):
     pass
@@ -76,9 +78,7 @@ class Account(Base):
 # ----------------------
 # Ledger Entries
 # ----------------------
-class EntryType(enum.Enum):
-    DEBIT = "DEBIT"
-    CREDIT = "CREDIT"
+# EntryType imports from domain
 
 
 class LedgerEntry(Base):

@@ -1,4 +1,5 @@
 from payments_ledger.adapters.db.idempotency_repo import SqlAlchemyIdempotencyRepo
+from payments_ledger.adapters.db.ledger_repo import SqlAlchemyLedgerRepo
 
 
 class SqlAlchemyUnitOfWork:
@@ -9,7 +10,7 @@ class SqlAlchemyUnitOfWork:
         self.session = self._session_factory()
         self._tx = await self.session.begin()
         self.idempotency_repo = SqlAlchemyIdempotencyRepo(self.session)
-        # self.ledger_repo = SqlAlchemyLedgerRepo(self.session)
+        self.ledger_repo = SqlAlchemyLedgerRepo(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
