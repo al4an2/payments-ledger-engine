@@ -29,7 +29,7 @@ Planned database schema: `db_schema.md`.
 ## Current State
 - Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
-- API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments`.
+- API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments` (explicit `direction`).
 - Application: payment orchestration + idempotency reserve/complete via ports.
 - Domain: ledger decision logic (invariants, credit limits, entry types).
 - Adapters: SQLAlchemy repos for idempotency, ledger, and auth.
@@ -76,7 +76,7 @@ curl -X POST "http://127.0.0.1:8000/payments" \
   -H "Authorization: Bearer <api_key>" \
   -H "Idempotency-Key: idem-001" \
   -H "Content-Type: application/json" \
-  -d '{"account_id":"acc_1","amount":1000,"currency":"EUR","request_id":"req-1"}'
+  -d '{"account_id":"acc_1","amount":1000,"currency":"EUR","direction":"DEBIT","request_id":"req-1"}'
 ```
 
 ## Migrations
@@ -142,7 +142,7 @@ uv run bandit -r src -x tests,alembic/versions
         │           Payments API            │
         │ - request validation              │
         │ - idempotency key extraction      │
-        │ - auth (stub)                     │
+        │ - auth repo                        │
         │ - calls service layer             │
         └───────────────────────────────────┘
                         │

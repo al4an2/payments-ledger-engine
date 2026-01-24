@@ -1,5 +1,11 @@
 # Changelog
 
+## v 0.0.26 - 2026-01-24
+- Added explicit `direction` to PaymentRequest and entry type conversion tests.
+- Promoted ledger enums/errors to domain and added decision helper structure.
+- Filled ledger repo account version update and balance query helpers.
+- Updated README to reflect API contract and auth repo wiring.
+
 ## v 0.0.25 - 2026-01-24
 - Added clean architecture ports and a SQLAlchemy Unit of Work for DB transactions.
 - Implemented SQLAlchemy adapters for ledger, idempotency, and auth.
