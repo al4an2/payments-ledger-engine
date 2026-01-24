@@ -1,8 +1,9 @@
 import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from payments_ledger.api.schemas import PaymentRequest
 from payments_ledger.data_models.db_models import Client
-from payments_ledger.adapters.db.idempotency_repo import SqlAlchemyIdempotencyRepo
+from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
 from payments_ledger.services.payments import process_payment
 
 
@@ -12,26 +13,25 @@ async def _seed_client(session, client_id: str = "client_1") -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_payment_duplicate_returns_same_response(db_session):
+async def test_process_payment_duplicate_returns_same_response(db_session, async_engine):
     await _seed_client(db_session)
 
-    idempotency_repo = SqlAlchemyIdempotencyRepo(db_session)
+    session_factory = async_sessionmaker(async_engine, expire_on_commit=False)
+    uow = SqlAlchemyUnitOfWork(session_factory)
     payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", request_id="r1")
 
     result_1 = await process_payment(
-        idempotency_repo=idempotency_repo,
-        session=db_session,
+        uow=uow,
         client_id="client_1",
         idempotency_key="idem-10",
-        payload=payload,
+        payload=payload.model_dump(exclude_none=True),
         request_id="r1",
     )
     result_2 = await process_payment(
-        idempotency_repo=idempotency_repo,
-        session=db_session,
+        uow=uow,
         client_id="client_1",
         idempotency_key="idem-10",
-        payload=payload,
+        payload=payload.model_dump(exclude_none=True),
         request_id="r2",
     )
 

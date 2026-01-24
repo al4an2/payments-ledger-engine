@@ -1,8 +1,7 @@
-import hashlib
 from fastapi import Header, HTTPException, Depends
-from sqlalchemy import select
 from payments_ledger.db.session import get_session
-from payments_ledger.data_models.db_models import Client
+from payments_ledger.adapters.db.auth_repo import SqlAlchemyAuthRepo
+from payments_ledger.services.auth import authenticate_token, InvalidCredentials
 
 
 async def get_client_id(
@@ -13,11 +12,9 @@ async def get_client_id(
         raise HTTPException(status_code=401, detail="Missing bearer token")
 
     token = authorization.removeprefix("Bearer ").strip()
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    repo = SqlAlchemyAuthRepo(session)
 
-    result = await session.execute(select(Client).where(Client.api_key_hash == token_hash))
-    client: Client | None = result.scalar_one_or_none()
-    if not client:
-        raise HTTPException(status_code=401, detail="Invalid api key")
-
-    return str(client.client_id)
+    try:
+        return await authenticate_token(repo, token)
+    except InvalidCredentials as exc:
+        raise HTTPException(status_code=401, detail=exc.code)
