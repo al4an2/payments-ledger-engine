@@ -1,4 +1,5 @@
 import enum
+from dataclasses import dataclass
 
 
 class AccountNotFound(Exception):
@@ -41,5 +42,59 @@ class BalanceType(enum.Enum):
     CREDIT_ALLOWED = "CREDIT_ALLOWED"
 
 
-async def decide_posting():
-    pass
+@dataclass(frozen=True)
+class LedgerDecision:
+    signed_amount: int
+    new_balance: int
+    new_ledger_version: int
+    entry_type: EntryType
+
+
+def _decision(
+    signed: int,
+    new_balance: int,
+    new_ledger_version: int,
+    direction: EntryType,
+) -> LedgerDecision:
+    return LedgerDecision(
+        signed_amount=signed,
+        new_balance=new_balance,
+        new_ledger_version=new_ledger_version,
+        entry_type=direction,
+    )
+
+
+def decide_posting(
+    amount: int,
+    direction: EntryType,
+    current_balance: int,
+    balance_type: BalanceType,
+    credit_limit: int | None,
+    current_ledger_version: int,
+) -> LedgerDecision:
+    if amount <= 0:
+        raise InvalidAmount()
+
+    signed = amount if direction == EntryType.CREDIT else -amount
+    new_balance = current_balance + signed
+    new_ledger_version = current_ledger_version + 1
+
+    if direction == EntryType.CREDIT:
+        return _decision(signed, new_balance, new_ledger_version, direction)
+
+    if new_balance >= 0:
+        return _decision(signed, new_balance, new_ledger_version, direction)
+
+    if balance_type == BalanceType.CREDIT_ALLOWED:
+        if credit_limit is None or credit_limit < 0:
+            raise InvalidAccountConfig()
+
+        if new_balance < -credit_limit:
+            raise CreditLimitExceeded()
+
+        return _decision(signed, new_balance, new_ledger_version, direction)
+
+    if balance_type == BalanceType.DEBIT_ONLY:
+        raise InsufficientFunds()
+
+    raise InvalidAccountConfig()
