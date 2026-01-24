@@ -1,7 +1,8 @@
-from sqlalchemy import select, insert
+from sqlalchemy import select, insert, update
 from sqlalchemy.sql.functions import sum as sum_, coalesce
-from payments_ledger.data_models.db_models import Account, LedgerEntry, EntryType
+from payments_ledger.data_models.db_models import Account, LedgerEntry
 from payments_ledger.services.ports import AccountSnapshot
+from payments_ledger.ledger_domain.ledger_engine import EntryType
 
 
 class SqlAlchemyLedgerRepo:
@@ -56,4 +57,10 @@ class SqlAlchemyLedgerRepo:
         return None
 
     async def update_account_version(self, account_id: str, ledger_version: int) -> None:
-        pass
+        await self.session.execute(
+            update(Account)
+            .where(Account.account_id == account_id)
+            .values(ledger_version=ledger_version)
+        )
+
+        return None

@@ -92,7 +92,7 @@ class LedgerEntry(Base):
     ledger_version: Mapped[int] = mapped_column(BigInteger, nullable=False)
     amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String, nullable=False)
-    entry_type: Mapped[EntryType] = mapped_column(Enum(EntryType), nullable=False)
+    entry_type: Mapped[EntryType] = mapped_column(Enum(EntryType, name="entrytype"), nullable=False)
     request_id: Mapped[str] = mapped_column(
         String, nullable=False
     )  # trace to idempotency key / request

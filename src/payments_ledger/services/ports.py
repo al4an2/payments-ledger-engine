@@ -44,10 +44,10 @@ class LedgerRepo(Protocol):
     async def insert_entry(
         self,
         account_id: str,
-        ledger_version: EntryType,
+        ledger_version: int,
         amount: int,
         currency: str,
-        entry_type: str,
+        entry_type: EntryType,
         request_id: str,
     ) -> None: ...
 
