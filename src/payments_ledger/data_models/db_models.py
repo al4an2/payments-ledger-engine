@@ -14,7 +14,7 @@ import enum
 from datetime import datetime
 from typing import Any
 
-from payments_ledger.ledger_domain.ledger_engine import EntryType
+from payments_ledger.ledger_domain.ledger_engine import EntryType, BalanceType
 
 
 class Base(DeclarativeBase):
@@ -52,9 +52,7 @@ class Client(Base):
 # ----------------------
 # Account
 # ----------------------
-class BalanceType(enum.Enum):
-    DEBIT_ONLY = "DEBIT_ONLY"
-    CREDIT_ALLOWED = "CREDIT_ALLOWED"
+# BalanceType import from domain
 
 
 class Account(Base):
@@ -65,7 +63,9 @@ class Account(Base):
     ledger_version: Mapped[int] = mapped_column(
         BigInteger, nullable=False, server_default=text("0")
     )
-    balance_type: Mapped[BalanceType] = mapped_column(Enum(BalanceType), nullable=False)
+    balance_type: Mapped[BalanceType] = mapped_column(
+        Enum(BalanceType, name="balancetype"), nullable=False
+    )
     credit_limit: Mapped[int] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
