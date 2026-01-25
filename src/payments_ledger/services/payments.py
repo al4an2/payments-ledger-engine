@@ -9,6 +9,10 @@ from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
     AccountOwnershipError,
     EntryType,
+    InvalidAmount,
+    InsufficientFunds,
+    CreditLimitExceeded,
+    InvalidAccountConfig,
     decide_posting,
 )
 
@@ -38,7 +42,7 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
         if idem_result.state == "duplicate":
             return idem_result.response
 
-        ##payment_process
+        ##payment_process start
         account_lock = await uow.ledger_repo.lock_account(payload.account_id)
         if not account_lock:
             raise AccountNotFound()
@@ -50,28 +54,56 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
         current_balance = await uow.ledger_repo.get_balance(
             payload.account_id, payload.currency
         )  # default return 0
-        decide_posting(
-            amount=payload.amount,
-            direction=typed_direction,
-            current_balance=current_balance,
-            balance_type=account_lock.balance_type,
-            credit_limit=account_lock.credit_limit,
-            current_ledger_version=account_lock.ledger_version,
-        )
+        try:
+            decision = decide_posting(
+                amount=payload.amount,
+                direction=typed_direction,
+                current_balance=current_balance,
+                balance_type=account_lock.balance_type,
+                credit_limit=account_lock.credit_limit,
+                current_ledger_version=account_lock.ledger_version,
+            )
 
-        ##payment_process in progress or rollback
+            await uow.ledger_repo.insert_entry(
+                account_id=payload.account_id,
+                ledger_version=decision.new_ledger_version,
+                amount=decision.signed_amount,
+                currency=payload.currency,
+                entry_type=decision.entry_type,
+                request_id=request_id,
+            )
 
-        response = {
-            "payment_id": str(uuid4()),
-            "status": "COMPLETED",
-            "request_id": request_id,
-        }
+            await uow.ledger_repo.update_account_version(
+                account_id=payload.account_id, ledger_version=decision.new_ledger_version
+            )
+
+            response = {
+                "payment_id": str(uuid4()),
+                "status": "COMPLETED",
+                "request_id": request_id,
+            }
+        except (
+            InvalidDirection,
+            InvalidAmount,
+            InsufficientFunds,
+            CreditLimitExceeded,
+            InvalidAccountConfig,
+            AccountNotFound,
+            AccountOwnershipError,
+        ) as exc:
+            response = {
+                "payment_id": None,
+                "status": "FAILED",
+                "request_id": request_id,
+                "error_code": exc.code,
+                "error_message": str(exc),
+            }
 
         idem_result = await complete_idempotency(
             uow.idempotency_repo,
             client_id,
             idempotency_key,
-            response,  ##tpm
+            response,
         )
 
         if idem_result.state == "duplicate":
