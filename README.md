@@ -96,6 +96,12 @@ uv run alembic current
 ```
 
 ## Testing
+Tests are split by layer to mirror clean architecture:
+
+- `tests/unit/` — pure unit tests (domain + application, no DB).
+- `tests/integration/` — SQLAlchemy adapters and DB-backed use cases.
+- `tests/api/` — API contract tests (if added).
+
 Tests use a **separate test database URL** and create a **temporary schema** per test run, so your real tables are not touched.
 
 1) Set a test DB URL (prefer a dedicated DB):
@@ -103,9 +109,16 @@ Tests use a **separate test database URL** and create a **temporary schema** per
 export TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/payments_ledger_test"
 ```
 
-2) Run tests:
+2) Run all tests:
 ```bash
 uv run pytest
+```
+
+Or run by layer:
+```bash
+uv run pytest tests/unit
+uv run pytest tests/integration
+uv run pytest tests/api
 ```
 
 Notes:

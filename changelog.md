@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.27 - 2026-01-25
+- Reorganized tests into layered folders (unit/integration/api) and split unit vs DB-backed tests.
+- Added adapter/use-case integration test locations and removed duplicate domain test file.
+- Updated README testing section to document the new structure and layer-specific runs.
+
 ## v 0.0.26 - 2026-01-24
 - Added explicit `direction` to PaymentRequest and entry type conversion tests.
 - Promoted ledger enums/errors to domain and added decision helper structure.
