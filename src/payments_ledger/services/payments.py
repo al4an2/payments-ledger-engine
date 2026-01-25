@@ -1,3 +1,4 @@
+import os
 from uuid import uuid4
 from payments_ledger.services.idempotency import (
     make_request_hash,
@@ -16,9 +17,23 @@ from payments_ledger.ledger_domain.ledger_engine import (
     decide_posting,
 )
 
+DEBUG_ERRORS = os.getenv("PAYMENTS_DEBUG_ERRORS", "0") == "1"
+
 
 class InvalidDirection(Exception):
     code = "INVALID_DIRECTION"
+
+
+def _error_response(exc: Exception, request_id: str) -> dict:
+    payload = {
+        "payment_id": None,
+        "status": "FAILED",
+        "request_id": request_id,
+        "error_code": getattr(exc, "code", "UNKNOWN_ERROR"),
+    }
+    if DEBUG_ERRORS:
+        payload["error_message"] = str(exc)
+    return payload
 
 
 def _types_direction(direction: str) -> EntryType:
@@ -32,29 +47,31 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
     request_hash = make_request_hash(payload)
 
     async with uow:
-        idem_result = await reserve_idempotency(
-            uow.idempotency_repo,
-            client_id,
-            idempotency_key,
-            request_hash,
-        )
-
-        if idem_result.state == "duplicate":
-            return idem_result.response
-
-        ##payment_process start
-        account_lock = await uow.ledger_repo.lock_account(payload.account_id)
-        if not account_lock:
-            raise AccountNotFound()
-
-        if account_lock.client_id != client_id:
-            raise AccountOwnershipError()
-
         typed_direction = _types_direction(payload.direction)
-        current_balance = await uow.ledger_repo.get_balance(
-            payload.account_id, payload.currency
-        )  # default return 0
+
         try:
+            idem_result = await reserve_idempotency(
+                uow.idempotency_repo,
+                client_id,
+                idempotency_key,
+                request_hash,
+            )
+
+            if idem_result.state == "duplicate":
+                return idem_result.response
+
+            ##payment_process start
+            account_lock = await uow.ledger_repo.lock_account(payload.account_id)
+            if not account_lock:
+                raise AccountNotFound()
+
+            if account_lock.client_id != client_id:
+                raise AccountOwnershipError()
+
+            current_balance = await uow.ledger_repo.get_balance(
+                payload.account_id, payload.currency
+            )  # default return 0
+
             decision = decide_posting(
                 amount=payload.amount,
                 direction=typed_direction,
@@ -83,7 +100,6 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
                 "request_id": request_id,
             }
         except (
-            InvalidDirection,
             InvalidAmount,
             InsufficientFunds,
             CreditLimitExceeded,
@@ -91,13 +107,7 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
             AccountNotFound,
             AccountOwnershipError,
         ) as exc:
-            response = {
-                "payment_id": None,
-                "status": "FAILED",
-                "request_id": request_id,
-                "error_code": exc.code,
-                "error_message": str(exc),
-            }
+            response = _error_response(exc, request_id)
 
         idem_result = await complete_idempotency(
             uow.idempotency_repo,
