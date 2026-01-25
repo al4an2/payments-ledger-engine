@@ -3,6 +3,15 @@ from typing import Protocol, Literal
 from payments_ledger.ledger_domain.ledger_engine import EntryType, BalanceType
 
 
+@dataclass(frozen=True)
+class PaymentCommand:
+    account_id: str
+    amount: int
+    currency: str
+    direction: Literal["DEBIT", "CREDIT"]
+    request_id: str | None = None
+
+
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
         super().__init__(message)

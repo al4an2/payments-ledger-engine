@@ -9,6 +9,7 @@ from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInPro
 from payments_ledger.services.payments import process_payment, InvalidDirection
 from payments_ledger.db.session import get_session_factory
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
+from payments_ledger.services.ports import PaymentCommand
 
 app = FastAPI()
 
@@ -60,11 +61,19 @@ async def create_payment(
     )
     #    signed_amount = payload.amount
 
+    payload_cmd = PaymentCommand(
+        account_id=payload.account_id,
+        amount=payload.amount,
+        currency=payload.currency,
+        direction=payload.direction,
+        request_id=request_id,
+    )
+
     result = await process_payment(
         uow=uow,
         client_id=client_id,
         idempotency_key=idempotency_key,
-        payload=payload.model_dump(exclude_none=True),
+        payload=payload_cmd,
         request_id=request_id,
     )
 

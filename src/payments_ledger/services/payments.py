@@ -44,7 +44,14 @@ def _types_direction(direction: str) -> EntryType:
 
 
 async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, request_id):
-    request_hash = make_request_hash(payload)
+    request_hash = make_request_hash(
+        {
+            "account_id": payload.account_id,
+            "amount": payload.amount,
+            "currency": payload.currency,
+            "direction": payload.direction,
+        }
+    )
 
     async with uow:
         typed_direction = _types_direction(payload.direction)
