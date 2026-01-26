@@ -18,7 +18,7 @@ async def complete_idempotency(
     response,
     status: IdempotencyState = IdempotencyState.COMPLETED,
 ) -> IdemResult:
-    return await repo.complete(client_id, idem_key, response)
+    return await repo.complete(client_id, idem_key, response, status)
 
 
 def make_request_hash(payload: Mapping[str, Any]) -> str:

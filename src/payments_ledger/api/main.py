@@ -6,7 +6,7 @@ from payments_ledger.api.auth import get_client_id
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
-from payments_ledger.services.payments import process_payment, InvalidDirection
+from payments_ledger.services.payments import process_payment
 from payments_ledger.db.session import get_session_factory
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
 from payments_ledger.services.ports import PaymentCommand
@@ -26,11 +26,6 @@ async def handle_idempotency_conflict(request: Request, exc: IdempotencyConflict
 @app.exception_handler(IdempotencyInProgress)
 async def handle_idempotency_in_progress(request: Request, exc: IdempotencyInProgress):
     return JSONResponse(status_code=409, content={"detail": exc.code})
-
-
-@app.exception_handler(InvalidDirection)
-async def handle_invalid_direction(request: Request, exc: InvalidDirection):
-    return JSONResponse(status_code=422, content={"detail": exc.code})
 
 
 @app.exception_handler(Exception)

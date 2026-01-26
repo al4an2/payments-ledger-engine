@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Protocol, Literal
+from typing import Protocol, Literal, Any
 from payments_ledger.ledger_domain.ledger_engine import EntryType, BalanceType
 import enum
 
@@ -17,6 +17,24 @@ class IdempotencyState(enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
+
+@dataclass(frozen=True)
+class PaymentResult:
+    payment_id: str | None
+    status: IdempotencyState
+    request_id: str
+    error_code: str | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "payment_id": self.payment_id,
+            "status": self.status.value,
+            "request_id": self.request_id,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+        }
 
 
 class IdempotencyConflict(Exception):
@@ -40,7 +58,9 @@ class IdemResult:
 class IdempotencyRepo(Protocol):
     async def reserve(self, client_id: str, idem_key: str, request_hash: str) -> IdemResult: ...
 
-    async def complete(self, client_id: str, idem_key: str, response: dict) -> IdemResult: ...
+    async def complete(
+        self, client_id: str, idem_key: str, response: dict, status: IdempotencyState
+    ) -> IdemResult: ...
 
 
 @dataclass(frozen=True)

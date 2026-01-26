@@ -5,7 +5,7 @@ from payments_ledger.services.idempotency import (
     reserve_idempotency,
     complete_idempotency,
 )
-from payments_ledger.services.ports import UnitOfWork, IdempotencyState
+from payments_ledger.services.ports import UnitOfWork, IdempotencyState, PaymentResult
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
     AccountOwnershipError,
@@ -24,16 +24,14 @@ class InvalidDirection(Exception):
     code = "INVALID_DIRECTION"
 
 
-def _error_response(exc: Exception, request_id: str) -> dict:
-    payload = {
-        "payment_id": None,
-        "status": IdempotencyState.FAILED,
-        "request_id": request_id,
-        "error_code": getattr(exc, "code", "UNKNOWN_ERROR"),
-    }
-    if DEBUG_ERRORS:
-        payload["error_message"] = str(exc)
-    return payload
+def _error_response(exc: Exception, request_id: str) -> PaymentResult:
+    return PaymentResult(
+        payment_id=None,
+        status=IdempotencyState.FAILED,
+        request_id=request_id,
+        error_code=getattr(exc, "code", "UNKNOWN_ERROR"),
+        error_message=str(exc) if DEBUG_ERRORS else None,
+    )
 
 
 def _types_direction(direction: str) -> EntryType:
@@ -100,11 +98,11 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
                 account_id=payload.account_id, ledger_version=decision.new_ledger_version
             )
 
-            response = {
-                "payment_id": str(uuid4()),
-                "status": IdempotencyState.COMPLETED,
-                "request_id": request_id,
-            }
+            response = PaymentResult(
+                payment_id=str(uuid4()),
+                status=IdempotencyState.COMPLETED,
+                request_id=request_id,
+            )
         except (
             InvalidDirection,
             InvalidAmount,
@@ -116,11 +114,9 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
         ) as exc:
             response = _error_response(exc, request_id)
 
+        payload = response.to_dict()
         idem_result = await complete_idempotency(
-            uow.idempotency_repo,
-            client_id,
-            idempotency_key,
-            response,
+            uow.idempotency_repo, client_id, idempotency_key, response, payload.status
         )
 
         if idem_result.state == "duplicate":
