@@ -8,6 +8,7 @@ from payments_ledger.services.ports import (
     IdemResult,
     IdempotencyConflict,
     IdempotencyInProgress,
+    IdempotencyState,
 )
 
 
@@ -87,7 +88,15 @@ class SqlAlchemyIdempotencyRepo:
 
         return IdemResult("reserved")
 
-    async def complete(self, client_id: str, idem_key: str, response: dict) -> IdemResult:
+    async def complete(
+        self, client_id: str, idem_key: str, response: dict, status: IdempotencyState
+    ) -> IdemResult:
+        STATE_MAP = {
+            IdempotencyState.COMPLETED: IdempotencyStatus.COMPLETED,
+            IdempotencyState.IN_PROGRESS: IdempotencyStatus.IN_PROGRESS,
+            IdempotencyState.FAILED: IdempotencyStatus.FAILED,
+        }
+
         stmt = (
             update(IdempotencyKey)
             .where(
@@ -96,7 +105,7 @@ class SqlAlchemyIdempotencyRepo:
                 IdempotencyKey.status == IdempotencyStatus.IN_PROGRESS,
             )
             .values(
-                status=IdempotencyStatus.COMPLETED,
+                status=STATE_MAP[status],
                 response_payload=response,
             )
         )

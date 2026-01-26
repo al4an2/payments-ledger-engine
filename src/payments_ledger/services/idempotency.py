@@ -2,7 +2,7 @@ import json
 import hashlib
 from typing import Mapping, Any
 
-from payments_ledger.services.ports import IdempotencyRepo, IdemResult
+from payments_ledger.services.ports import IdempotencyRepo, IdemResult, IdempotencyState
 
 
 async def reserve_idempotency(
@@ -11,7 +11,13 @@ async def reserve_idempotency(
     return await repo.reserve(client_id, idem_key, request_hash)
 
 
-async def complete_idempotency(repo: IdempotencyRepo, client_id, idem_key, response) -> IdemResult:
+async def complete_idempotency(
+    repo: IdempotencyRepo,
+    client_id,
+    idem_key,
+    response,
+    status: IdempotencyState = IdempotencyState.COMPLETED,
+) -> IdemResult:
     return await repo.complete(client_id, idem_key, response)
 
 

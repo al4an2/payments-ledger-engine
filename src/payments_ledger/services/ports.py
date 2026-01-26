@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol, Literal
 from payments_ledger.ledger_domain.ledger_engine import EntryType, BalanceType
+import enum
 
 
 @dataclass(frozen=True)
@@ -10,6 +11,12 @@ class PaymentCommand:
     currency: str
     direction: Literal["DEBIT", "CREDIT"]
     request_id: str | None = None
+
+
+class IdempotencyState(enum.Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class IdempotencyConflict(Exception):

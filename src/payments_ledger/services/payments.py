@@ -5,7 +5,7 @@ from payments_ledger.services.idempotency import (
     reserve_idempotency,
     complete_idempotency,
 )
-from payments_ledger.services.ports import UnitOfWork
+from payments_ledger.services.ports import UnitOfWork, IdempotencyState
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
     AccountOwnershipError,
@@ -27,7 +27,7 @@ class InvalidDirection(Exception):
 def _error_response(exc: Exception, request_id: str) -> dict:
     payload = {
         "payment_id": None,
-        "status": "FAILED",
+        "status": IdempotencyState.FAILED,
         "request_id": request_id,
         "error_code": getattr(exc, "code", "UNKNOWN_ERROR"),
     }
@@ -54,8 +54,6 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
     )
 
     async with uow:
-        typed_direction = _types_direction(payload.direction)
-
         try:
             idem_result = await reserve_idempotency(
                 uow.idempotency_repo,
@@ -79,6 +77,7 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
                 payload.account_id, payload.currency
             )  # default return 0
 
+            typed_direction = _types_direction(payload.direction)
             decision = decide_posting(
                 amount=payload.amount,
                 direction=typed_direction,
@@ -103,10 +102,11 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
 
             response = {
                 "payment_id": str(uuid4()),
-                "status": "COMPLETED",
+                "status": IdempotencyState.COMPLETED,
                 "request_id": request_id,
             }
         except (
+            InvalidDirection,
             InvalidAmount,
             InsufficientFunds,
             CreditLimitExceeded,
