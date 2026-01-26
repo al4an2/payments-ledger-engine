@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.28 - 2026-01-26
+- Added PaymentResult DTO with idempotency status mapping (COMPLETED/FAILED).
+- Logged unexpected API exceptions with request path for easier debugging.
+- Updated README to reflect idempotency response status handling.
+
 ## v 0.0.27 - 2026-01-25
 - Reorganized tests into layered folders (unit/integration/api) and split unit vs DB-backed tests.
 - Added adapter/use-case integration test locations and removed duplicate domain test file.

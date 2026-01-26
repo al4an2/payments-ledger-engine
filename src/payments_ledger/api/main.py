@@ -20,16 +20,31 @@ def get_uow():
 
 @app.exception_handler(IdempotencyConflict)
 async def handle_idempotency_conflict(request: Request, exc: IdempotencyConflict):
+    logger.warning(
+        "idempotency_conflict",
+        extra={
+            "path": request.url.path,
+            "error_code": exc.code,
+        },
+    )
     return JSONResponse(status_code=409, content={"detail": exc.code})
 
 
 @app.exception_handler(IdempotencyInProgress)
 async def handle_idempotency_in_progress(request: Request, exc: IdempotencyInProgress):
+    logger.warning(
+        "idempotency_in_progress",
+        extra={
+            "path": request.url.path,
+            "error_code": exc.code,
+        },
+    )
     return JSONResponse(status_code=409, content={"detail": exc.code})
 
 
 @app.exception_handler(Exception)
 async def handle_unexpected(request: Request, exc: Exception):
+    logger.exception("unhandled_exception", extra={"path": request.url.path})
     return JSONResponse(status_code=500, content={"detail": "INTERNAL_ERROR"})
 
 
@@ -51,10 +66,6 @@ async def create_payment(
     uow: UnitOfWork = Depends(get_uow),
 ):
     request_id = payload.request_id or str(uuid4())
-    logger.info(
-        "payment_request", extra={"account_id": payload.account_id, "request_id": request_id}
-    )
-    #    signed_amount = payload.amount
 
     payload_cmd = PaymentCommand(
         account_id=payload.account_id,
@@ -64,12 +75,31 @@ async def create_payment(
         request_id=request_id,
     )
 
+    logger.info(
+        "payment_request",
+        extra={
+            "request_id": request_id,
+            "client_id": client_id,
+            "account_id": payload.account_id,
+            "idempotency_key": idempotency_key,
+        },
+    )
+
     result = await process_payment(
         uow=uow,
         client_id=client_id,
         idempotency_key=idempotency_key,
         payload=payload_cmd,
         request_id=request_id,
+    )
+
+    logger.info(
+        "payment_result",
+        extra={
+            "request_id": request_id,
+            "status": result["status"],
+            "error_code": result.get("error_code"),
+        },
     )
 
     return PaymentResponse(**result)

@@ -43,6 +43,7 @@ Planned database schema: `db_schema.md`.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
 - Idempotency flow via repo adapter (reserve/complete) stores response payloads for exact retries.
+- Application returns a typed `PaymentResult` DTO; idempotency stores `COMPLETED`/`FAILED` outcomes.
 - Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
 - Payments service orchestrates idempotency + (stub) ledger write path integration.
