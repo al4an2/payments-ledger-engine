@@ -116,10 +116,10 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
 
         payload = response.to_dict()
         idem_result = await complete_idempotency(
-            uow.idempotency_repo, client_id, idempotency_key, response, payload.status
+            uow.idempotency_repo, client_id, idempotency_key, payload, response.status
         )
 
         if idem_result.state == "duplicate":
             return idem_result.response
 
-        return response
+        return payload
