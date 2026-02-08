@@ -4,18 +4,27 @@ from uuid import uuid4
 from payments_ledger.api.auth import get_client_id
 
 from payments_ledger.config.logging import logger
-from payments_ledger.api.schemas import PaymentRequest, PaymentResponse
+from payments_ledger.api.schemas import (
+    PaymentRequest,
+    PaymentResponse,
+    BalanceRequest,
+    BalanceResponse,
+)
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
-from payments_ledger.services.payments import process_payment
+from payments_ledger.services.payments import process_payment, balance_process
 from payments_ledger.db.session import get_session_factory
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
-from payments_ledger.services.ports import PaymentCommand
+from payments_ledger.services.ports import PaymentCommand, GetBalanceCommand
 
 app = FastAPI()
 
 
 def get_uow():
     return SqlAlchemyUnitOfWork(get_session_factory())
+
+
+def get_request_id(value: str | None) -> str:
+    return value or str(uuid4())
 
 
 @app.exception_handler(IdempotencyConflict)
@@ -53,9 +62,33 @@ async def read_root():
     return {"Hello": "200"}
 
 
-@app.get("/balance/{account_id}")
-async def read_balance():
-    return {"Hello": "Get your balance"}
+@app.get("/balance/{account_id}", response_model=BalanceRequest, response_model_exclude_none=True)
+async def read_balance(
+    payload: BalanceRequest,
+    client_id: str = Depends(get_client_id),
+    uow: UnitOfWork = Depends(get_uow),
+):
+    request_id = get_request_id(payload.request_id)
+
+    payload_cmd = GetBalanceCommand(
+        account_id=payload.account_id,
+        currency=payload.currency,
+        request_id=request_id,
+    )
+
+    logger.info(
+        "balance_request",
+        extra={"request_id": request_id, "client_id": client_id, "account_id": payload.account_id},
+    )
+
+    result = await balance_process(
+        uow=uow,
+        client_id=client_id,
+        payload=payload_cmd,
+        request_id=request_id,
+    )
+
+    return BalanceResponse(**result)
 
 
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
@@ -65,7 +98,7 @@ async def create_payment(
     client_id: str = Depends(get_client_id),
     uow: UnitOfWork = Depends(get_uow),
 ):
-    request_id = payload.request_id or str(uuid4())
+    request_id = get_request_id(payload.request_id)
 
     payload_cmd = PaymentCommand(
         account_id=payload.account_id,

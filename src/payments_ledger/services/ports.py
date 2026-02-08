@@ -13,6 +13,13 @@ class PaymentCommand:
     request_id: str | None = None
 
 
+@dataclass(frozen=True)
+class GetBalanceCommand:
+    account_id: str
+    currency: str
+    request_id: str | None = None
+
+
 class IdempotencyState(enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"

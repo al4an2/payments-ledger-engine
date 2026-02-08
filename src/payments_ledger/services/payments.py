@@ -123,3 +123,7 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
             return idem_result.response
 
         return payload
+
+
+async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
+    pass
