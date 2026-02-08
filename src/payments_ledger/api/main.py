@@ -62,7 +62,7 @@ async def read_root():
     return {"Hello": "200"}
 
 
-@app.get("/balance/{account_id}", response_model=BalanceRequest, response_model_exclude_none=True)
+@app.get("/balance/{account_id}", response_model=BalanceResponse, response_model_exclude_none=True)
 async def read_balance(
     payload: BalanceRequest,
     client_id: str = Depends(get_client_id),
