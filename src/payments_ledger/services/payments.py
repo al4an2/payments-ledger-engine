@@ -5,7 +5,13 @@ from payments_ledger.services.idempotency import (
     reserve_idempotency,
     complete_idempotency,
 )
-from payments_ledger.services.ports import UnitOfWork, IdempotencyState, PaymentResult
+from payments_ledger.services.ports import (
+    UnitOfWork,
+    IdempotencyState,
+    PaymentResult,
+    BalanceResult,
+    BalanceStatus,
+)
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
     AccountOwnershipError,
@@ -64,12 +70,11 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
                 return idem_result.response
 
             ##payment_process start
-            account_lock = await uow.ledger_repo.lock_account(payload.account_id)
+            account_lock = await uow.ledger_repo.lock_account_for_client(
+                payload.account_id, client_id
+            )
             if not account_lock:
                 raise AccountNotFound()
-
-            if account_lock.client_id != client_id:
-                raise AccountOwnershipError()
 
             current_balance = await uow.ledger_repo.get_balance(
                 payload.account_id, payload.currency
@@ -126,4 +131,35 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
 
 
 async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
-    pass
+    async with uow:
+        try:
+            account_data = await uow.ledger_repo.get_account_for_client(
+                payload.account_id, client_id
+            )
+
+            if not account_data:
+                raise AccountNotFound()
+
+            balance_result = await uow.ledger_repo.get_balance(
+                payload.account_id, payload.currency
+            )  # default return 0
+
+            result = BalanceResult(
+                account_id=payload.account_id,
+                currency=payload.currency,
+                request_id=request_id,
+                balance=balance_result,
+                status=BalanceStatus.OK,
+            )
+        except (AccountNotFound, AccountOwnershipError) as exc:
+            result = BalanceResult(
+                account_id=payload.account_id,
+                currency=payload.currency,
+                request_id=request_id,
+                balance=None,
+                status=BalanceStatus.FAILED,
+                error_code=getattr(exc, "code", "UNKNOWN_ERROR"),
+                error_message=str(exc) if DEBUG_ERRORS else None,
+            )
+
+    return result.to_dict()

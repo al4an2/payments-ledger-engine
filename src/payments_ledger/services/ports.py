@@ -44,6 +44,33 @@ class PaymentResult:
         }
 
 
+class BalanceStatus(enum.Enum):
+    OK = "OK"
+    FAILED = "FAILED"
+
+
+@dataclass(frozen=True)
+class BalanceResult:
+    account_id: str
+    currency: str
+    request_id: str
+    balance: int | None
+    status: BalanceStatus
+    error_code: str | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "account_id": self.account_id,
+            "currency": self.currency,
+            "request_id": self.request_id,
+            "balance": self.balance,
+            "status": self.status.value,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+        }
+
+
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
         super().__init__(message)
@@ -80,7 +107,13 @@ class AccountSnapshot:
 
 
 class LedgerRepo(Protocol):
-    async def lock_account(self, account_id: str) -> AccountSnapshot | None: ...
+    async def get_account_for_client(
+        self, account_id: str, client_id: str
+    ) -> AccountSnapshot | None: ...
+
+    async def lock_account_for_client(
+        self, account_id: str, client_id: str
+    ) -> AccountSnapshot | None: ...
 
     async def get_balance(self, account_id: str, currency: str) -> int: ...
 

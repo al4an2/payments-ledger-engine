@@ -10,14 +10,39 @@ class SqlAlchemyLedgerRepo:
         self.session = session
         self.ttl_hours = ttl_hours
 
-    async def lock_account(self, account_id: str) -> AccountSnapshot | None:
+    async def get_account_for_client(
+        self, account_id: str, client_id: str
+    ) -> AccountSnapshot | None:
         result = await self.session.execute(
-            select(Account).where(Account.account_id == account_id).with_for_update()
+            select(Account).where(Account.account_id == account_id, Account.client_id == client_id)
+        )
+        row = result.scalar_one_or_none()
+
+        if row is None:
+            return None
+
+        return AccountSnapshot(
+            account_id=account_id,
+            client_id=str(row.client_id),
+            ledger_version=row.ledger_version,
+            balance_type=row.balance_type,
+            credit_limit=row.credit_limit,
+        )
+
+    async def lock_account_for_client(
+        self, account_id: str, client_id: str
+    ) -> AccountSnapshot | None:
+        result = await self.session.execute(
+            select(Account)
+            .where(Account.account_id == account_id, Account.client_id == client_id)
+            .with_for_update()
         )
 
         row = result.scalar_one_or_none()
+
         if row is None:
             return None
+
         return AccountSnapshot(
             account_id=account_id,
             client_id=str(row.client_id),

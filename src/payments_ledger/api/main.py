@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Header, Depends
+from fastapi import FastAPI, Request, Header, Query, Depends
 from fastapi.responses import JSONResponse
 from uuid import uuid4
 from payments_ledger.api.auth import get_client_id
@@ -7,7 +7,6 @@ from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import (
     PaymentRequest,
     PaymentResponse,
-    BalanceRequest,
     BalanceResponse,
 )
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
@@ -64,21 +63,23 @@ async def read_root():
 
 @app.get("/balance/{account_id}", response_model=BalanceResponse, response_model_exclude_none=True)
 async def read_balance(
-    payload: BalanceRequest,
+    account_id: str,
+    currency: str = Query(..., min_length=3, max_length=3, description="ISO 4217 currency code"),
+    request_id: str | None = Header(None, alias="X-Request-Id"),
     client_id: str = Depends(get_client_id),
     uow: UnitOfWork = Depends(get_uow),
 ):
-    request_id = get_request_id(payload.request_id)
+    request_id = get_request_id(request_id)
 
     payload_cmd = GetBalanceCommand(
-        account_id=payload.account_id,
-        currency=payload.currency,
+        account_id=account_id,
+        currency=currency,
         request_id=request_id,
     )
 
     logger.info(
         "balance_request",
-        extra={"request_id": request_id, "client_id": client_id, "account_id": payload.account_id},
+        extra={"request_id": request_id, "client_id": client_id, "account_id": account_id},
     )
 
     result = await balance_process(
@@ -86,6 +87,15 @@ async def read_balance(
         client_id=client_id,
         payload=payload_cmd,
         request_id=request_id,
+    )
+
+    logger.info(
+        "balance_result",
+        extra={
+            "request_id": request_id,
+            "status": result["status"],
+            "error_code": result.get("error_code"),
+        },
     )
 
     return BalanceResponse(**result)
