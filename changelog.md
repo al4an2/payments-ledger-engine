@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.29 - 2026-02-08
+- Added `/balance` API endpoint and processes from them.
+- Added API tests for `/balance` success/error cases.
+- Documented `/balance` usage and query parameters in README.
+
 ## v 0.0.28 - 2026-01-26
 - Added PaymentResult DTO with idempotency status mapping (COMPLETED/FAILED).
 - Logged unexpected API exceptions with request path for easier debugging.

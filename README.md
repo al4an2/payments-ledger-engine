@@ -29,7 +29,7 @@ Planned database schema: `db_schema.md`.
 ## Current State
 - Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
-- API: FastAPI app with `/health`, `/balance/{account_id}`, `/payments` (explicit `direction`).
+- API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/payments` (explicit `direction`).
 - Application: payment orchestration + idempotency reserve/complete via ports.
 - Domain: ledger decision logic (invariants, credit limits, entry types).
 - Adapters: SQLAlchemy repos for idempotency, ledger, and auth.
@@ -46,7 +46,7 @@ Planned database schema: `db_schema.md`.
 - Application returns a typed `PaymentResult` DTO; idempotency stores `COMPLETED`/`FAILED` outcomes.
 - Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
-- Payments service orchestrates idempotency + (stub) ledger write path integration.
+- Payments service orchestrates idempotency + ledger write path integration.
 - FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Alembic initialized with baseline migration.
 
@@ -71,13 +71,17 @@ uv run alembic upgrade head
 uv run uvicorn payments_ledger.api.main:app --reload --app-dir src
 ```
 
-5) Example request:
+5) Example requests:
 ```bash
 curl -X POST "http://127.0.0.1:8000/payments" \
   -H "Authorization: Bearer <api_key>" \
   -H "Idempotency-Key: idem-001" \
   -H "Content-Type: application/json" \
   -d '{"account_id":"acc_1","amount":1000,"currency":"EUR","direction":"DEBIT","request_id":"req-1"}'
+
+curl -X GET "http://127.0.0.1:8000/balance/acc_1?currency=EUR" \
+  -H "Authorization: Bearer <api_key>" \
+  -H "X-Request-Id: req-2"
 ```
 
 ## Migrations
@@ -101,7 +105,7 @@ Tests are split by layer to mirror clean architecture:
 
 - `tests/unit/` — pure unit tests (domain + application, no DB).
 - `tests/integration/` — SQLAlchemy adapters and DB-backed use cases.
-- `tests/api/` — API contract tests (if added).
+- `tests/api/` — API contract tests.
 
 Tests use a **separate test database URL** and create a **temporary schema** per test run, so your real tables are not touched.
 

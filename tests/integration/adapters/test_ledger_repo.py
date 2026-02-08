@@ -28,12 +28,12 @@ async def _seed_client_account(
 
 
 @pytest.mark.asyncio
-async def test_lock_account_returns_snapshot(db_session):
+async def test_get_account_for_client_returns_snapshot(db_session):
     await _seed_client_account(db_session)
 
     repo = SqlAlchemyLedgerRepo(db_session)
     async with db_session.begin():
-        snap = await repo.lock_account("acc_1")
+        snap = await repo.get_account_for_client("acc_1", "client_1")
 
     assert snap is not None
     assert snap.account_id == "acc_1"
@@ -43,10 +43,35 @@ async def test_lock_account_returns_snapshot(db_session):
 
 
 @pytest.mark.asyncio
-async def test_lock_account_returns_none(db_session):
+async def test_get_account_for_client_returns_none(db_session):
+    await _seed_client_account(db_session)
+
     repo = SqlAlchemyLedgerRepo(db_session)
     async with db_session.begin():
-        snap = await repo.lock_account("missing")
+        snap = await repo.get_account_for_client("acc_1", "other_client")
+    assert snap is None
+
+
+@pytest.mark.asyncio
+async def test_lock_account_for_client_returns_snapshot(db_session):
+    await _seed_client_account(db_session)
+
+    repo = SqlAlchemyLedgerRepo(db_session)
+    async with db_session.begin():
+        snap = await repo.lock_account_for_client("acc_1", "client_1")
+
+    assert snap is not None
+    assert snap.account_id == "acc_1"
+    assert snap.client_id == "client_1"
+    assert snap.ledger_version == 0
+    assert snap.balance_type == BalanceType.DEBIT_ONLY
+
+
+@pytest.mark.asyncio
+async def test_lock_account_for_client_returns_none(db_session):
+    repo = SqlAlchemyLedgerRepo(db_session)
+    async with db_session.begin():
+        snap = await repo.lock_account_for_client("missing", "client_1")
     assert snap is None
 
 

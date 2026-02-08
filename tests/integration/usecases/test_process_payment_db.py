@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from payments_ledger.api.schemas import PaymentRequest
 from payments_ledger.data_models.db_models import Client, Account
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
 from payments_ledger.services.payments import process_payment
+from payments_ledger.services.ports import PaymentCommand
 from payments_ledger.ledger_domain.ledger_engine import BalanceType
 
 
@@ -44,7 +44,7 @@ async def test_process_payment_duplicate_returns_same_response(db_session, async
 
     session_factory = async_sessionmaker(async_engine, expire_on_commit=False)
     uow = SqlAlchemyUnitOfWork(session_factory)
-    payload = PaymentRequest(
+    payload = PaymentCommand(
         account_id="acc_1",
         amount=1000,
         currency="EUR",
