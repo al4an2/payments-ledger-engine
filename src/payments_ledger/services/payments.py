@@ -14,7 +14,6 @@ from payments_ledger.services.ports import (
 )
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
-    AccountOwnershipError,
     EntryType,
     InvalidAmount,
     InsufficientFunds,
@@ -115,7 +114,6 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
             CreditLimitExceeded,
             InvalidAccountConfig,
             AccountNotFound,
-            AccountOwnershipError,
         ) as exc:
             response = _error_response(exc, request_id)
 
@@ -151,7 +149,7 @@ async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
                 balance=balance_result,
                 status=BalanceStatus.OK,
             )
-        except (AccountNotFound, AccountOwnershipError) as exc:
+        except AccountNotFound as exc:
             result = BalanceResult(
                 account_id=payload.account_id,
                 currency=payload.currency,
