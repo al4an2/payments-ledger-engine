@@ -20,6 +20,12 @@ class GetBalanceCommand:
     request_id: str | None = None
 
 
+@dataclass(frozen=True)
+class GetAccountInfoCommand:
+    account_id: str
+    request_id: str
+
+
 class IdempotencyState(enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"

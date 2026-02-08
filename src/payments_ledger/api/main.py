@@ -10,10 +10,10 @@ from payments_ledger.api.schemas import (
     BalanceResponse,
 )
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
-from payments_ledger.services.payments import process_payment, balance_process
+from payments_ledger.services.payments import process_payment, balance_process, account_info_process
 from payments_ledger.db.session import get_session_factory
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
-from payments_ledger.services.ports import PaymentCommand, GetBalanceCommand
+from payments_ledger.services.ports import PaymentCommand, GetBalanceCommand, GetAccountInfoCommand
 
 app = FastAPI()
 
@@ -146,3 +146,28 @@ async def create_payment(
     )
 
     return PaymentResponse(**result)
+
+
+@app.get("/accounts/{account_id}", response_model=..., response_model_exclude_none=True)
+async def read_account_info(
+    account_id: str,
+    request_id: str | None = Header(None, alias="X-Request-Id"),
+    client_id: str = Depends(get_client_id),
+    uow: UnitOfWork = Depends(get_uow),
+):
+    request_id = get_request_id(request_id)
+
+    payload_cmd = GetAccountInfoCommand(
+        account_id=account_id,
+        request_id=request_id,
+    )
+
+    logger.info(
+        "account_info_request",
+        extra={"request_id": request_id, "client_id": client_id, "account_id": account_id},
+    )
+
+    await account_info_process(
+        uow=uow, client_id=client_id, payload=payload_cmd, request_id=request_id
+    )
+    pass

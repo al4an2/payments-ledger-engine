@@ -26,3 +26,13 @@ class BalanceResponse(BaseModel):
     request_id: str
     error_code: str | None = None
     error_message: str | None = None
+
+
+class AccountInfoResponse(BaseModel):
+    account_id: str
+    balance_type: str
+    credit_limit: int
+    status: str
+    request_id: str
+    error_code: str | None = None
+    error_message: str | None = None

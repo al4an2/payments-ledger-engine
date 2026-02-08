@@ -161,3 +161,7 @@ async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
             )
 
     return result.to_dict()
+
+
+async def account_info_process(uow: UnitOfWork, client_id, payload, request_id):
+    pass
