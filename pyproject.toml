@@ -43,6 +43,9 @@ dev = [
 line-length = 100
 exclude = ["alembic/versions/*.py"]
 
+[tool.ruff.lint]
+select = ["E", "F", "ARG"]
+
 [tool.mypy]
 python_version = "3.12"
 exclude = ["alembic/versions/*.py"]

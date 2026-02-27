@@ -53,7 +53,13 @@ async def handle_idempotency_in_progress(request: Request, exc: IdempotencyInPro
 
 @app.exception_handler(Exception)
 async def handle_unexpected(request: Request, exc: Exception):
-    logger.exception("unhandled_exception", extra={"path": request.url.path})
+    logger.exception(
+        "unhandled_exception",
+        extra={
+            "path": request.url.path,
+            "error_type": type(exc).__name__,
+        },
+    )
     return JSONResponse(status_code=500, content={"detail": "INTERNAL_ERROR"})
 
 
