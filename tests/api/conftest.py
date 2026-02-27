@@ -3,8 +3,8 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from payments_ledger.api.main import app, get_uow
-from payments_ledger.api.auth import get_client_id
+from payments_ledger.api.main import app
+from payments_ledger.api.deps import get_uow, get_client_id
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
 from payments_ledger.data_models.db_models import Client, Account, LedgerEntry
 from payments_ledger.ledger_domain.ledger_engine import BalanceType, EntryType
