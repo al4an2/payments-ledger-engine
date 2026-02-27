@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, clean architecture refactor in place, ledger rules + adapters implemented, ledger write-path integration in progress
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, clean architecture refactor in place, API contract tests expanded
 
 ## Project Goal
 
@@ -29,7 +29,7 @@ Planned database schema: `db_schema.md`.
 ## Current State
 - Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
-- API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/payments` (explicit `direction`).
+- API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/accounts/{account_id}`, `/payments` (explicit `direction`).
 - Application: payment orchestration + idempotency reserve/complete via ports.
 - Domain: ledger decision logic (invariants, credit limits, entry types).
 - Adapters: SQLAlchemy repos for idempotency, ledger, and auth.
@@ -48,6 +48,8 @@ Planned database schema: `db_schema.md`.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
 - Payments service orchestrates idempotency + ledger write path integration.
 - FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
+- Account info read path (`/accounts/{account_id}`) returns account configuration (`balance_type`, `credit_limit`) with tenant isolation.
+- API response schemas use stricter literal status/value contracts for read/write endpoints.
 - Alembic initialized with baseline migration.
 
 ## Local Setup
@@ -82,6 +84,10 @@ curl -X POST "http://127.0.0.1:8000/payments" \
 curl -X GET "http://127.0.0.1:8000/balance/acc_1?currency=EUR" \
   -H "Authorization: Bearer <api_key>" \
   -H "X-Request-Id: req-2"
+
+curl -X GET "http://127.0.0.1:8000/accounts/acc_1" \
+  -H "Authorization: Bearer <api_key>" \
+  -H "X-Request-Id: req-3"
 ```
 
 ## Migrations
@@ -129,6 +135,7 @@ uv run pytest tests/api
 Notes:
 - If you don’t want to create a separate database, you can point `TEST_DATABASE_URL` to the same DB. Tests will still use an isolated schema.
 - Tables are created via ORM metadata for tests (not Alembic).
+- API tests cover success/error contracts, auth header validation, and tenant-isolation cases for read endpoints.
 
 ## Code Quality
 Run lint + format:

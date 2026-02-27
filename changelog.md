@@ -1,5 +1,11 @@
 # Changelog
 
+## v 0.0.30 - 2026-02-27
+- Added `/accounts/{account_id}` API flow (endpoint + service process) with tenant ownership checks.
+- Added `AccountInfoResponse` contract and account result mapping for read operations (`OK`/`FAILED` + error codes).
+- Expanded API tests for `/accounts` and `/balance` with stricter response contracts, auth error scenarios, and tenant-isolation cases.
+- Updated unexpected exception logging to include error type for easier debugging.
+
 ## v 0.0.29 - 2026-02-08
 - Added `/balance` API endpoint and processes from them.
 - Added API tests for `/balance` success/error cases.
