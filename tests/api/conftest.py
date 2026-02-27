@@ -1,4 +1,5 @@
 import pytest_asyncio
+import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -28,7 +29,16 @@ async def api_client(async_engine):
 
 
 @pytest_asyncio.fixture
-async def seed_client_account():
+async def raw_api_client():
+    app.dependency_overrides.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def seed_client_account():
     async def _seed(
         session,
         *,
@@ -37,8 +47,15 @@ async def seed_client_account():
         balance_type: BalanceType = BalanceType.DEBIT_ONLY,
         credit_limit: int | None = None,
         ledger_version: int = 0,
+        api_key_hash: str | None = None,
     ) -> None:
-        session.add(Client(client_id=client_id, name="Test Client", api_key_hash="hash_1"))
+        session.add(
+            Client(
+                client_id=client_id,
+                name="Test Client",
+                api_key_hash=api_key_hash or f"hash_{client_id}",
+            )
+        )
         session.add(
             Account(
                 account_id=account_id,
@@ -53,8 +70,8 @@ async def seed_client_account():
     return _seed
 
 
-@pytest_asyncio.fixture
-async def seed_ledger_entries():
+@pytest.fixture
+def seed_ledger_entries():
     async def _seed(
         session,
         *,
