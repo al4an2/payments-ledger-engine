@@ -12,7 +12,7 @@ class PaymentRequest(BaseModel):
 
 class PaymentResponse(BaseModel):
     payment_id: str | None = None
-    status: str
+    status: Literal["COMPLETED", "FAILED", "IN_PROGRESS"]
     request_id: str
     error_code: str | None = None
     error_message: str | None = None
@@ -20,9 +20,9 @@ class PaymentResponse(BaseModel):
 
 class BalanceResponse(BaseModel):
     account_id: str
-    currency: str
+    currency: str = Field(..., min_length=3, max_length=3)
     balance: int | None = None
-    status: str
+    status: Literal["OK", "FAILED"]
     request_id: str
     error_code: str | None = None
     error_message: str | None = None
@@ -30,9 +30,9 @@ class BalanceResponse(BaseModel):
 
 class AccountInfoResponse(BaseModel):
     account_id: str
-    balance_type: str
-    credit_limit: int
-    status: str
+    balance_type: Literal["DEBIT_ONLY", "CREDIT_ALLOWED"] | None = None
+    credit_limit: int | None = None
+    status: Literal["OK", "FAILED"]
     request_id: str
     error_code: str | None = None
     error_message: str | None = None

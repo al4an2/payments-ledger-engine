@@ -11,6 +11,8 @@ from payments_ledger.services.ports import (
     PaymentResult,
     BalanceResult,
     BalanceStatus,
+    AccountResult,
+    AccountStatus,
 )
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
@@ -135,7 +137,7 @@ async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
                 payload.account_id, client_id
             )
 
-            if not account_data:
+            if not account_data or client_id != account_data.client_id:
                 raise AccountNotFound()
 
             balance_result = await uow.ledger_repo.get_balance(
@@ -164,4 +166,32 @@ async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
 
 
 async def account_info_process(uow: UnitOfWork, client_id, payload, request_id):
-    pass
+    async with uow:
+        try:
+            account_data = await uow.ledger_repo.get_account_for_client(
+                payload.account_id, client_id
+            )
+
+            if not account_data or client_id != account_data.client_id:
+                raise AccountNotFound()
+
+            result = AccountResult(
+                account_id=payload.account_id,
+                balance_type=account_data.balance_type,
+                request_id=request_id,
+                credit_limit=account_data.credit_limit,
+                status=AccountStatus.OK,
+            )
+
+        except AccountNotFound as exc:
+            result = AccountResult(
+                account_id=payload.account_id,
+                balance_type=None,
+                request_id=request_id,
+                credit_limit=None,
+                status=AccountStatus.FAILED,
+                error_code=getattr(exc, "code", "UNKNOWN_ERROR"),
+                error_message=str(exc) if DEBUG_ERRORS else None,
+            )
+
+        return result.to_dict()

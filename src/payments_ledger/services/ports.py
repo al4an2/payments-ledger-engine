@@ -77,6 +77,33 @@ class BalanceResult:
         }
 
 
+class AccountStatus(enum.Enum):
+    OK = "OK"
+    FAILED = "FAILED"
+
+
+@dataclass(frozen=True)
+class AccountResult:
+    account_id: str
+    balance_type: BalanceType | None
+    request_id: str
+    credit_limit: int | None
+    status: AccountStatus
+    error_code: str | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "account_id": self.account_id,
+            "balance_type": self.balance_type.value if self.balance_type else None,
+            "request_id": self.request_id,
+            "credit_limit": self.credit_limit,
+            "status": self.status.value,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+        }
+
+
 class IdempotencyConflict(Exception):
     def __init__(self, message="Idempotency key reused with different payload"):
         super().__init__(message)

@@ -8,6 +8,7 @@ from payments_ledger.api.schemas import (
     PaymentRequest,
     PaymentResponse,
     BalanceResponse,
+    AccountInfoResponse,
 )
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
 from payments_ledger.services.payments import process_payment, balance_process, account_info_process
@@ -148,7 +149,9 @@ async def create_payment(
     return PaymentResponse(**result)
 
 
-@app.get("/accounts/{account_id}", response_model=..., response_model_exclude_none=True)
+@app.get(
+    "/accounts/{account_id}", response_model=AccountInfoResponse, response_model_exclude_none=True
+)
 async def read_account_info(
     account_id: str,
     request_id: str | None = Header(None, alias="X-Request-Id"),
@@ -167,7 +170,16 @@ async def read_account_info(
         extra={"request_id": request_id, "client_id": client_id, "account_id": account_id},
     )
 
-    await account_info_process(
+    result = await account_info_process(
         uow=uow, client_id=client_id, payload=payload_cmd, request_id=request_id
     )
-    pass
+
+    logger.info(
+        "account_result",
+        extra={
+            "request_id": request_id,
+            "status": result["status"],
+            "error_code": result.get("error_code"),
+        },
+    )
+    return AccountInfoResponse(**result)
