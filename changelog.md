@@ -1,5 +1,10 @@
 # Changelog
 
+## v 0.0.31 - 27.02.2026
+- Refactored API dependency wiring by centralizing providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
+- Expanded `/payments` API tests with negative/error contract coverage (auth errors, domain failures, exception mapping).
+- Refactored integration test setup: moved shared DB seed helpers into `tests/integration/conftest.py` and reused them across adapter/use-case tests.
+
 ## v 0.0.30 - 2026-02-27
 - Added `/accounts/{account_id}` API flow (endpoint + service process) with tenant ownership checks.
 - Added `AccountInfoResponse` contract and account result mapping for read operations (`OK`/`FAILED` + error codes).

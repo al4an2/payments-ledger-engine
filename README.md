@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, clean architecture refactor in place, API contract tests expanded
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, API and integration test coverage expanded
 
 ## Project Goal
 
@@ -30,6 +30,7 @@ Planned database schema: `db_schema.md`.
 - Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/accounts/{account_id}`, `/payments` (explicit `direction`).
+- API dependencies: centralized providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
 - Application: payment orchestration + idempotency reserve/complete via ports.
 - Domain: ledger decision logic (invariants, credit limits, entry types).
 - Adapters: SQLAlchemy repos for idempotency, ledger, and auth.
@@ -136,6 +137,7 @@ Notes:
 - If you don’t want to create a separate database, you can point `TEST_DATABASE_URL` to the same DB. Tests will still use an isolated schema.
 - Tables are created via ORM metadata for tests (not Alembic).
 - API tests cover success/error contracts, auth header validation, and tenant-isolation cases for read endpoints.
+- Integration tests use shared seed fixtures from `tests/integration/conftest.py` to avoid setup duplication.
 
 ## Code Quality
 Run lint + format:
