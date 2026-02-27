@@ -1,42 +1,18 @@
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from payments_ledger.data_models.db_models import Client, Account
 from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
 from payments_ledger.services.payments import process_payment
 from payments_ledger.services.ports import PaymentCommand
 from payments_ledger.ledger_domain.ledger_engine import BalanceType
 
 
-async def _seed_client(session, client_id: str = "client_1") -> None:
-    session.add(Client(client_id=client_id, name="Test Client", api_key_hash="hash_1"))
-    await session.commit()
-
-
-async def _seed_account(
-    session,
-    client_id: str = "client_1",
-    account_id: str = "acc_1",
-    balance_type: BalanceType = BalanceType.DEBIT_ONLY,
-    credit_limit: int | None = None,
-    ledger_version: int = 0,
-) -> None:
-    session.add(
-        Account(
-            account_id=account_id,
-            client_id=client_id,
-            balance_type=balance_type,
-            credit_limit=credit_limit,
-            ledger_version=ledger_version,
-        )
-    )
-    await session.commit()
-
-
 @pytest.mark.asyncio
-async def test_process_payment_duplicate_returns_same_response(db_session, async_engine):
-    await _seed_client(db_session)
-    await _seed_account(
+async def test_process_payment_duplicate_returns_same_response(
+    db_session, async_engine, seed_client, seed_account
+):
+    await seed_client(db_session)
+    await seed_account(
         db_session,
         balance_type=BalanceType.CREDIT_ALLOWED,
         credit_limit=2000,

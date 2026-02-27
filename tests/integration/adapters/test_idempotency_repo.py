@@ -1,7 +1,6 @@
 import pytest
 
 from payments_ledger.api.schemas import PaymentRequest
-from payments_ledger.data_models.db_models import Client
 from payments_ledger.adapters.db.idempotency_repo import SqlAlchemyIdempotencyRepo
 from payments_ledger.services.idempotency import (
     complete_idempotency,
@@ -11,14 +10,9 @@ from payments_ledger.services.idempotency import (
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress
 
 
-async def _seed_client(session, client_id: str = "client_1") -> None:
-    session.add(Client(client_id=client_id, name="Test Client", api_key_hash="hash_1"))
-    await session.commit()
-
-
 @pytest.mark.asyncio
-async def test_idempotency_duplicate_returns_saved_response(db_session):
-    await _seed_client(db_session)
+async def test_idempotency_duplicate_returns_saved_response(db_session, seed_client):
+    await seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
     payload = PaymentRequest(
@@ -41,8 +35,8 @@ async def test_idempotency_duplicate_returns_saved_response(db_session):
 
 
 @pytest.mark.asyncio
-async def test_idempotency_in_progress_raises(db_session):
-    await _seed_client(db_session)
+async def test_idempotency_in_progress_raises(db_session, seed_client):
+    await seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
     payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT")
@@ -58,8 +52,8 @@ async def test_idempotency_in_progress_raises(db_session):
 
 
 @pytest.mark.asyncio
-async def test_idempotency_conflict_raises(db_session):
-    await _seed_client(db_session)
+async def test_idempotency_conflict_raises(db_session, seed_client):
+    await seed_client(db_session)
 
     repo = SqlAlchemyIdempotencyRepo(db_session)
     payload = PaymentRequest(account_id="acc_1", amount=1000, currency="EUR", direction="DEBIT")
