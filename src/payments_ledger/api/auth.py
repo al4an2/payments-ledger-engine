@@ -4,7 +4,7 @@ from payments_ledger.adapters.db.auth_repo import SqlAlchemyAuthRepo
 from payments_ledger.services.auth import authenticate_token, InvalidCredentials
 
 
-async def get_client_id(
+async def get_client_id_auth(
     authorization: str = Header(...),
     session=Depends(get_session, use_cache=False),
 ) -> str:

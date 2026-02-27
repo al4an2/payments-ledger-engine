@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, Header, Query, Depends
 from fastapi.responses import JSONResponse
 from uuid import uuid4
-from payments_ledger.api.auth import get_client_id
+from payments_ledger.api.deps import get_client_id
+from payments_ledger.api.deps import get_uow
 
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import (
@@ -12,15 +13,10 @@ from payments_ledger.api.schemas import (
 )
 from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
 from payments_ledger.services.payments import process_payment, balance_process, account_info_process
-from payments_ledger.db.session import get_session_factory
-from payments_ledger.adapters.db.uow import SqlAlchemyUnitOfWork
+
 from payments_ledger.services.ports import PaymentCommand, GetBalanceCommand, GetAccountInfoCommand
 
 app = FastAPI()
-
-
-def get_uow():
-    return SqlAlchemyUnitOfWork(get_session_factory())
 
 
 def get_request_id(value: str | None) -> str:
