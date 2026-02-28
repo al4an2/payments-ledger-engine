@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Header, Query, Depends
 from fastapi.responses import JSONResponse
 from uuid import uuid4
 from payments_ledger.api.deps import get_client_id
-from payments_ledger.api.deps import get_uow
+from payments_ledger.api.deps import get_uow, check_idem_key_format
 
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import (
@@ -107,7 +107,7 @@ async def read_balance(
 @app.post("/payments", response_model=PaymentResponse, response_model_exclude_none=True)
 async def create_payment(
     payload: PaymentRequest,
-    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    idempotency_key: str = Depends(check_idem_key_format),
     client_id: str = Depends(get_client_id),
     uow: UnitOfWork = Depends(get_uow),
 ):
