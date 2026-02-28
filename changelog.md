@@ -1,9 +1,17 @@
 # Changelog
 
+## v 0.0.32 - 28.02.2026
+- Added API-level `Idempotency-Key` format/length validation via dependency (`check_idem_key_format`) and covered invalid key scenarios with API tests.
+- Added optimistic account version update behavior in ledger repository (`expected_ledger_version` guard) and integration coverage for version mismatch (`rowcount == 0` path).
+- Added architecture and cache consistency documentation:
+  - `docs/cache_vesrioning.md`
+
 ## v 0.0.31 - 27.02.2026
 - Refactored API dependency wiring by centralizing providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
 - Expanded `/payments` API tests with negative/error contract coverage (auth errors, domain failures, exception mapping).
 - Refactored integration test setup: moved shared DB seed helpers into `tests/integration/conftest.py` and reused them across adapter/use-case tests.
+- Added architecture and cache consistency documentation:
+  - `docs/architecture.md`
 
 ## v 0.0.30 - 2026-02-27
 - Added `/accounts/{account_id}` API flow (endpoint + service process) with tenant ownership checks.

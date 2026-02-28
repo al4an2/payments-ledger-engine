@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, API and integration test coverage expanded
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added
 
 ## Project Goal
 
@@ -27,7 +27,7 @@ This project demonstrates:
 Planned database schema: `db_schema.md`.
 
 ## Current State
-- Docs: `docs/db_schema.md`, `docs/design.md`, `changelog.md`.
+- Docs: `docs/db_schema.md`, `docs/design.md`, `docs/architecture.md`, `docs/cache_vesrioning.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/accounts/{account_id}`, `/payments` (explicit `direction`).
 - API dependencies: centralized providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
@@ -44,9 +44,11 @@ Planned database schema: `db_schema.md`.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
 - Idempotency flow via repo adapter (reserve/complete) stores response payloads for exact retries.
+- API validates `Idempotency-Key` format/length in dependency layer before service execution.
 - Application returns a typed `PaymentResult` DTO; idempotency stores `COMPLETED`/`FAILED` outcomes.
 - Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
+- Account version update supports optimistic guard (`expected_ledger_version`) for safer concurrent write detection.
 - Payments service orchestrates idempotency + ledger write path integration.
 - FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Account info read path (`/accounts/{account_id}`) returns account configuration (`balance_type`, `credit_limit`) with tenant isolation.
