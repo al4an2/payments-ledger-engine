@@ -178,3 +178,28 @@ class UnitOfWork(Protocol):
 
 class AuthRepo(Protocol):
     async def get_client_id_by_api_key_hash(self, api_key_hash: str) -> str | None: ...
+
+
+@dataclass(frozen=True)
+class BalanceCachedData:
+    account_id: str
+    currency: str
+    balance: int
+    ledger_version: int
+    updated_at_ts_ms: int
+
+
+class BalanceCacheL1(Protocol):
+    async def get_if_fresh(self, key: str, expected_version: int) -> BalanceCachedData | None: ...
+
+    async def put(self, item: BalanceCachedData) -> None: ...
+
+    async def invalidate(self, key: str) -> None: ...
+
+
+class BalanceCacheL2(Protocol):
+    async def get(self, key: str, expected_version: int) -> BalanceCachedData | None: ...
+
+    async def set(self, key: str, item: BalanceCachedData, ttl: int) -> None: ...
+
+    async def delete(self, key: str) -> None: ...
