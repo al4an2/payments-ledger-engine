@@ -98,8 +98,33 @@ async def test_update_account_version(db_session, seed_client_account):
 
     repo = SqlAlchemyLedgerRepo(db_session)
     async with db_session.begin():
-        await repo.update_account_version("acc_1", 5)
+        updated = await repo.update_account_version(
+            account_id="acc_1",
+            ledger_version=5,
+            expected_ledger_version=0,
+        )
         result = await db_session.execute(select(Account).where(Account.account_id == "acc_1"))
         account = result.scalar_one()
 
+    assert updated is True
     assert account.ledger_version == 5
+
+
+@pytest.mark.asyncio
+async def test_update_account_version_returns_false_on_version_mismatch(
+    db_session, seed_client_account
+):
+    await seed_client_account(db_session, ledger_version=2)
+
+    repo = SqlAlchemyLedgerRepo(db_session)
+    async with db_session.begin():
+        updated = await repo.update_account_version(
+            account_id="acc_1",
+            ledger_version=5,
+            expected_ledger_version=1,
+        )
+        result = await db_session.execute(select(Account).where(Account.account_id == "acc_1"))
+        account = result.scalar_one()
+
+    assert updated is False
+    assert account.ledger_version == 2
