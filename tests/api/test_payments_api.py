@@ -191,6 +191,32 @@ async def test_payments_missing_idempotency_key_returns_422(api_client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "invalid_key",
+    [
+        "short-1",  # < 8 chars
+        "k" * 129,  # > 128 chars
+        "invalid key!",  # invalid symbols
+    ],
+)
+async def test_payments_invalid_idempotency_key_returns_422(api_client, invalid_key):
+    response = await api_client.post(
+        "/payments",
+        headers={"Idempotency-Key": invalid_key},
+        json={
+            "account_id": "acc_1",
+            "amount": 1000,
+            "currency": "EUR",
+            "direction": "DEBIT",
+            "request_id": "req-invalid-idem-1",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "INVALID_IDEMPOTENCY_KEY"}
+
+
+@pytest.mark.asyncio
 async def test_payments_idempotency_duplicate_returns_same_response(
     api_client, db_session, seed_client_account
 ):
