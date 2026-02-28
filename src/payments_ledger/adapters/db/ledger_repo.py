@@ -81,11 +81,15 @@ class SqlAlchemyLedgerRepo:
 
         return None
 
-    async def update_account_version(self, account_id: str, ledger_version: int) -> None:
-        await self.session.execute(
+    async def update_account_version(
+        self, account_id: str, ledger_version: int, expected_ledger_version: int
+    ) -> bool:
+        result = await self.session.execute(
             update(Account)
-            .where(Account.account_id == account_id)
+            .where(
+                Account.account_id == account_id, Account.ledger_version == expected_ledger_version
+            )
             .values(ledger_version=ledger_version)
         )
 
-        return None
+        return int(result.rowcount) == 1

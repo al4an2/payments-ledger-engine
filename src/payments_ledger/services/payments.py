@@ -13,6 +13,7 @@ from payments_ledger.services.ports import (
     BalanceStatus,
     AccountResult,
     AccountStatus,
+    ConcurrentLedgerWrite,
 )
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
@@ -100,9 +101,13 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
                 request_id=request_id,
             )
 
-            await uow.ledger_repo.update_account_version(
-                account_id=payload.account_id, ledger_version=decision.new_ledger_version
+            updated = await uow.ledger_repo.update_account_version(
+                account_id=payload.account_id,
+                ledger_version=decision.new_ledger_version,
+                expected_ledger_version=account_lock.ledger_version,
             )
+            if not updated:
+                raise ConcurrentLedgerWrite()
 
             response = PaymentResult(
                 payment_id=str(uuid4()),
@@ -116,6 +121,7 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
             CreditLimitExceeded,
             InvalidAccountConfig,
             AccountNotFound,
+            ConcurrentLedgerWrite,
         ) as exc:
             response = _error_response(exc, request_id)
 

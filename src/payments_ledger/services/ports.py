@@ -139,6 +139,12 @@ class AccountSnapshot:
     credit_limit: int | None
 
 
+class ConcurrentLedgerWrite(Exception):
+    def __init__(self, message="Concurrent ledger write conflict"):
+        super().__init__(message)
+        self.code = "CONCURRENT_LEDGER_WRITE"
+
+
 class LedgerRepo(Protocol):
     async def get_account_for_client(
         self, account_id: str, client_id: str
@@ -160,7 +166,9 @@ class LedgerRepo(Protocol):
         request_id: str,
     ) -> None: ...
 
-    async def update_account_version(self, account_id: str, ledger_version: int) -> None: ...
+    async def update_account_version(
+        self, account_id: str, ledger_version: int, expected_ledger_version: int
+    ) -> bool: ...
 
 
 class UnitOfWork(Protocol):
