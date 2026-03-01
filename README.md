@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
 
 ## Project Goal
 
