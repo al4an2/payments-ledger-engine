@@ -189,11 +189,15 @@ class AuthRepo(Protocol):
 
 
 @dataclass(frozen=True)
-class BalanceCachedData:
+class BalanceCacheWriteData:
     account_id: str
     currency: str
     balance: int
     ledger_version: int
+
+
+@dataclass(frozen=True)
+class BalanceCachedData(BalanceCacheWriteData):
     updated_at_ts_ms: int
 
 
@@ -202,7 +206,7 @@ class BalanceCacheL1(Protocol):
         self, account_id: str, currency: str, expected_version: int
     ) -> BalanceCachedData | None: ...
 
-    async def put(self, item: BalanceCachedData) -> None: ...
+    async def put(self, item: BalanceCacheWriteData) -> None: ...
 
     async def invalidate(self, account_id: str, currency: str) -> None: ...
 
@@ -212,6 +216,6 @@ class BalanceCacheL2(Protocol):
         self, account_id: str, currency: str, expected_version: int
     ) -> BalanceCachedData | None: ...
 
-    async def set(self, item: BalanceCachedData, ttl_seconds: int) -> None: ...
+    async def set(self, item: BalanceCacheWriteData, ttl_seconds: int) -> None: ...
 
     async def delete(self, account_id: str, currency: str) -> None: ...

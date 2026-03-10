@@ -1,5 +1,6 @@
-from payments_ledger.services.ports import BalanceCachedData
+from payments_ledger.services.ports import BalanceCachedData, BalanceCacheWriteData
 from payments_ledger.adapters.cache.shared_layer import build_balance_cache_key
+from time import time
 
 
 class VersionedMapCache:
@@ -24,12 +25,21 @@ class VersionedMapCache:
 
         return cached
 
-    async def put(self, item: BalanceCachedData) -> None:
+    async def put(self, item: BalanceCacheWriteData) -> None:
         key = build_balance_cache_key(account_id=item.account_id, currency=item.currency)
         cached = self._cache.get(key)
 
         if cached is None or item.ledger_version >= cached.ledger_version:
-            self._cache[key] = item
+            now_ts_ms = int(time() * 1000)
+
+            cached_item = BalanceCachedData(
+                account_id=item.account_id,
+                currency=item.currency,
+                balance=item.balance,
+                ledger_version=item.ledger_version,
+                updated_at_ts_ms=now_ts_ms,
+            )
+            self._cache[key] = cached_item
 
     async def invalidate(self, account_id: str, currency: str) -> None:
         key = build_balance_cache_key(account_id=account_id, currency=currency)

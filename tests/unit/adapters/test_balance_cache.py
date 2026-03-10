@@ -1,7 +1,7 @@
 import pytest
 
 from payments_ledger.adapters.cache.versioned_map_cache import VersionedMapCache
-from payments_ledger.services.ports import BalanceCachedData
+from payments_ledger.services.ports import BalanceCacheWriteData
 
 
 def _item(
@@ -10,14 +10,12 @@ def _item(
     currency: str = "EUR",
     balance: int = 100,
     ledger_version: int,
-    updated_at_ts_ms: int = 1_700_000_000_000,
-) -> BalanceCachedData:
-    return BalanceCachedData(
+) -> BalanceCacheWriteData:
+    return BalanceCacheWriteData(
         account_id=account_id,
         currency=currency,
         balance=balance,
         ledger_version=ledger_version,
-        updated_at_ts_ms=updated_at_ts_ms,
     )
 
 
@@ -47,7 +45,12 @@ async def test_put_then_get_if_fresh_returns_item_for_exact_version():
         expected_version=3,
     )
 
-    assert result == item
+    assert result is not None
+    assert result.account_id == item.account_id
+    assert result.currency == item.currency
+    assert result.balance == item.balance
+    assert result.ledger_version == item.ledger_version
+    assert isinstance(result.updated_at_ts_ms, int)
 
 
 @pytest.mark.asyncio
@@ -147,7 +150,7 @@ async def test_put_overwrites_same_version():
     cache = VersionedMapCache()
 
     await cache.put(_item(balance=100, ledger_version=3))
-    await cache.put(_item(balance=250, ledger_version=3, updated_at_ts_ms=1_700_000_000_100))
+    await cache.put(_item(balance=250, ledger_version=3))
 
     result = await cache.get_if_fresh(
         account_id="acc_1",
@@ -158,7 +161,7 @@ async def test_put_overwrites_same_version():
     assert result is not None
     assert result.ledger_version == 3
     assert result.balance == 250
-    assert result.updated_at_ts_ms == 1_700_000_000_100
+    assert isinstance(result.updated_at_ts_ms, int)
 
 
 @pytest.mark.asyncio

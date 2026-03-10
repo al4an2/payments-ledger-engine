@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Header, Query, Depends
 from fastapi.responses import JSONResponse
 from uuid import uuid4
 from payments_ledger.api.deps import get_client_id
-from payments_ledger.api.deps import get_uow, check_idem_key_format
+from payments_ledger.api.deps import get_uow, check_idem_key_format, get_balance_cache_l1
 
 from payments_ledger.config.logging import logger
 from payments_ledger.api.schemas import (
@@ -11,7 +11,12 @@ from payments_ledger.api.schemas import (
     BalanceResponse,
     AccountInfoResponse,
 )
-from payments_ledger.services.ports import IdempotencyConflict, IdempotencyInProgress, UnitOfWork
+from payments_ledger.services.ports import (
+    IdempotencyConflict,
+    IdempotencyInProgress,
+    UnitOfWork,
+    BalanceCacheL1,
+)
 from payments_ledger.services.payments import process_payment, balance_process, account_info_process
 
 from payments_ledger.services.ports import PaymentCommand, GetBalanceCommand, GetAccountInfoCommand
@@ -71,6 +76,7 @@ async def read_balance(
     request_id: str | None = Header(None, alias="X-Request-Id"),
     client_id: str = Depends(get_client_id),
     uow: UnitOfWork = Depends(get_uow),
+    balance_cache_l1: BalanceCacheL1 = Depends(get_balance_cache_l1),
 ):
     request_id = get_request_id(request_id)
 
@@ -90,6 +96,7 @@ async def read_balance(
         client_id=client_id,
         payload=payload_cmd,
         request_id=request_id,
+        balance_cache_l1=balance_cache_l1,
     )
 
     logger.info(

@@ -14,6 +14,8 @@ from payments_ledger.services.ports import (
     AccountResult,
     AccountStatus,
     ConcurrentLedgerWrite,
+    BalanceCacheWriteData,
+    BalanceCacheL1,
 )
 from payments_ledger.ledger_domain.ledger_engine import (
     AccountNotFound,
@@ -136,7 +138,9 @@ async def process_payment(uow: UnitOfWork, client_id, idempotency_key, payload, 
         return payload
 
 
-async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
+async def balance_process(
+    uow: UnitOfWork, client_id, payload, request_id, balance_cache_l1: BalanceCacheL1
+):
     async with uow:
         try:
             account_data = await uow.ledger_repo.get_account_for_client(
@@ -146,17 +150,41 @@ async def balance_process(uow: UnitOfWork, client_id, payload, request_id):
             if not account_data or client_id != account_data.client_id:
                 raise AccountNotFound()
 
-            balance_result = await uow.ledger_repo.get_balance(
-                payload.account_id, payload.currency
-            )  # default return 0
-
-            result = BalanceResult(
-                account_id=payload.account_id,
-                currency=payload.currency,
-                request_id=request_id,
-                balance=balance_result,
-                status=BalanceStatus.OK,
+            balance_cache = await balance_cache_l1.get_if_fresh(
+                payload.account_id, payload.currency, account_data.ledger_version
             )
+
+            if balance_cache is not None:
+                result = BalanceResult(
+                    account_id=payload.account_id,
+                    currency=payload.currency,
+                    request_id=request_id,
+                    balance=balance_cache.balance,
+                    status=BalanceStatus.OK,
+                )
+
+            else:
+                balance_result = await uow.ledger_repo.get_balance(
+                    payload.account_id, payload.currency
+                )  # default return 0
+
+                await balance_cache_l1.put(
+                    BalanceCacheWriteData(
+                        account_id=payload.account_id,
+                        currency=payload.currency,
+                        balance=balance_result,
+                        ledger_version=account_data.ledger_version,
+                    )
+                )
+
+                result = BalanceResult(
+                    account_id=payload.account_id,
+                    currency=payload.currency,
+                    request_id=request_id,
+                    balance=balance_result,
+                    status=BalanceStatus.OK,
+                )
+
         except AccountNotFound as exc:
             result = BalanceResult(
                 account_id=payload.account_id,
