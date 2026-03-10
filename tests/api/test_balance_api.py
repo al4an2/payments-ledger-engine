@@ -4,6 +4,8 @@ import pytest
 
 import payments_ledger.api.auth as auth_api
 from payments_ledger.services.auth import InvalidCredentials
+from payments_ledger.adapters.db.ledger_repo import SqlAlchemyLedgerRepo
+from payments_ledger.ledger_domain.ledger_engine import EntryType
 
 
 def _expected_balance_not_found(account_id: str, currency: str, request_id: str) -> dict[str, str]:
@@ -150,3 +152,61 @@ async def test_balance_invalid_api_key_returns_401(raw_api_client, monkeypatch):
 
     assert response.status_code == 401
     assert response.json() == {"detail": "INVALID_API_KEY"}
+
+
+@pytest.mark.asyncio
+async def test_balance_second_read_uses_cache_hit(
+    api_client,
+    db_session,
+    seed_client_account,
+    seed_ledger_entries,
+    monkeypatch,
+):
+    await seed_client_account(
+        db_session,
+        account_id="acc_cache_hit",
+        ledger_version=2,
+    )
+    await seed_ledger_entries(
+        db_session,
+        entries=[
+            {
+                "account_id": "acc_cache_hit",
+                "ledger_version": 1,
+                "amount": -150,
+                "currency": "EUR",
+                "entry_type": EntryType.DEBIT,
+                "request_id": "r1",
+            },
+            {
+                "account_id": "acc_cache_hit",
+                "ledger_version": 2,
+                "amount": 50,
+                "currency": "EUR",
+                "entry_type": EntryType.CREDIT,
+                "request_id": "r2",
+            },
+        ],
+    )
+
+    response_1 = await api_client.get(
+        "/balance/acc_cache_hit?currency=EUR",
+        headers={"X-Request-Id": "req-cache-1"},
+    )
+
+    assert response_1.status_code == 200
+    assert response_1.json()["balance"] == -100
+
+    async def _boom(_self, _account_id: str, _currency: str) -> int:
+        raise AssertionError("DB get_balance should not be called on cache hit")
+
+    monkeypatch.setattr(SqlAlchemyLedgerRepo, "get_balance", _boom)
+
+    response_2 = await api_client.get(
+        "/balance/acc_cache_hit?currency=EUR",
+        headers={"X-Request-Id": "req-cache-2"},
+    )
+
+    assert response_2.status_code == 200
+    assert response_2.json()["balance"] == -100
+    assert response_2.json()["status"] == "OK"
