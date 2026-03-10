@@ -1,6 +1,6 @@
 import pytest
 
-from payments_ledger.adapters.cache.balance_cache import VersionedMapCache
+from payments_ledger.adapters.cache.versioned_map_cache import VersionedMapCache
 from payments_ledger.services.ports import BalanceCachedData
 
 
