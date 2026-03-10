@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, initial in-process versioned L1 cache wired into `/balance`, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
 
 ## Project Goal
 
@@ -15,7 +15,9 @@ Build a service that:
 - Processes payments with **exactly-once** semantics.
 - Maintains an **append-only ledger**.
 - Supports **idempotency** for requests.
-- Uses **versioned cache** (L1 in-process + L2 Redis) to speed up reads.
+- Uses **versioned cache** to speed up reads.
+- Current implementation: L1 in-process cache for `/balance`.
+- Planned next: `WTinyLFU`-style L1 and Redis L2.
 - Provides APIs for balances and payments.
 
 This project demonstrates:
@@ -27,7 +29,7 @@ This project demonstrates:
 Planned database schema: `db_schema.md`.
 
 ## Current State
-- Docs: `docs/db_schema.md`, `docs/design.md`, `docs/architecture.md`, `docs/cache_vesrioning.md`, `changelog.md`.
+- Docs: `docs/db_schema.md`, `docs/design.md`, `docs/architecture.md`, `docs/cache_versioning.md`, `changelog.md`.
 - Infrastructure: `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/accounts/{account_id}`, `/payments` (explicit `direction`).
 - API dependencies: centralized providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
@@ -50,10 +52,22 @@ Planned database schema: `db_schema.md`.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
 - Account version update supports optimistic guard (`expected_ledger_version`) for safer concurrent write detection.
 - Payments service orchestrates idempotency + ledger write path integration.
+- `/balance` read path uses an initial in-process versioned L1 cache (`VersionedMapCache`) with `ledger_version` freshness checks and miss -> DB -> cache fill behavior.
+- Cache contracts separate write input from stored cache entry (`BalanceCacheWriteData` vs `BalanceCachedData`), so adapters own cache metadata such as `updated_at_ts_ms`.
 - FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Account info read path (`/accounts/{account_id}`) returns account configuration (`balance_type`, `credit_limit`) with tenant isolation.
 - API response schemas use stricter literal status/value contracts for read/write endpoints.
 - Alembic initialized with baseline migration.
+
+## Cache Status
+- Implemented now:
+  - versioned in-process L1 cache for `GET /balance`
+  - exact version-match freshness checks via `accounts.ledger_version`
+  - unit/application/API coverage for base cache semantics and cache-hit read path
+- Planned next:
+  - bounded/segmented L1
+  - `WTinyLFU`-based L1
+  - Redis L2
 
 ## Local Setup
 1) Install dependencies:

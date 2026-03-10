@@ -1,44 +1,60 @@
-# Versioned Balance Cache (L1 + L2)
+# Versioned Balance Cache
 
 ## Status
-Proposed
+Implemented now:
+- L1 v1: in-process `VersionedMapCache` wired into `GET /balance`.
+
+Planned next:
+- L1: bounded/segmented cache, then `WTinyLFUBalanceCacheL1`.
+- L2: Redis-backed shared cache.
 
 ## Context
-`GET /balance` currently reads from Postgres (`SUM(ledger_entries)`), which is consistent but expensive at scale.
+`GET /balance` is consistency-first and calculates balance from Postgres (`SUM(ledger_entries)`).
+This is simple and correct, but the read cost grows with account history. The cache design keeps
+freshness tied to `accounts.ledger_version`, not to TTL.
 
-## Decision
-Use a two-layer cache:
-- L1: in-process cache for ultra-fast local hits.
-- L2: Redis for shared cross-instance hits.
+## Current Read Path
+1. Load the account snapshot for `account_id + client_id`.
+2. Read the current `ledger_version` from the account snapshot.
+3. Try L1 `get_if_fresh(account_id, currency, expected_version)`.
+4. On fresh hit, return the cached balance.
+5. On miss, compute balance from Postgres and write the result into L1.
 
-Cache correctness is version-based:
-- Source of truth for freshness is `accounts.ledger_version`.
-- A cache entry is valid only when:
-  `cached.ledger_version == current_account.ledger_version`.
+Negative results such as `ACCOUNT_NOT_FOUND` are not cached.
 
-## Key and Value Contract
-- Key: `balance:{account_id}:{currency}` (`currency` normalized to uppercase).
-- Value fields: `account_id`, `currency`, `balance`, `ledger_version`, `updated_at_ts_ms`.
+## Version Semantics
+- A cache hit is valid only when `cached.ledger_version == expected_version`.
+- If `cached.ledger_version < expected_version`, the entry is stale:
+  return miss and remove it from L1.
+- If `cached.ledger_version > expected_version`, return miss without invalidation.
+- `put(...)` must never overwrite a newer cached version with an older one.
 
-## Read Path
-1. Read current account version.
-2. Try L1 with expected version.
-3. On miss, try L2 with expected version.
-4. On miss/stale, read DB and repopulate L2 then L1.
+This keeps cache correctness aligned with the monotonic `accounts.ledger_version` model.
 
-## Write Path
-After successful `process_payment`:
+## Cache Contract
+- `BalanceCacheWriteData`: data written by the use case into the cache.
+- `BalanceCachedData`: stored/read cache entry with `updated_at_ts_ms`.
+- `updated_at_ts_ms` is assigned by the adapter inside `put(...)`, not by the service layer.
+
+## Keying
+- Internal key format: `balance:{account_id}:{currency}`.
+- Key construction lives inside cache adapters via a shared key builder.
+- Application/service code works with domain fields (`account_id`, `currency`), not raw cache keys.
+
+## Write Path Interaction
+After a successful `process_payment`:
 - `accounts.ledger_version` increments.
-- Previous cache entries are stale by definition.
+- Any older cached balance becomes stale by definition.
 
-## Operational Policy
-Redis TTL is optional and used for memory/cleanup only.
-TTL is not a consistency mechanism.
+The current implementation does not yet actively refresh or invalidate L1 on writes.
+Freshness is still preserved because reads validate against the latest account version.
 
-## Consequences
-Pros:
-- Strong consistency semantics with low read latency.
-- Safe under retries and delayed invalidation.
-
-Trade-off:
-- Extra read step to load current version before cache validation.
+## Evolution Path
+1. `VersionedMapCache`
+   Current baseline implementation for correctness and integration.
+2. Bounded L1
+   Add eviction mechanics (`LRU` / segmented cache) without changing the service contract.
+3. `WTinyLFUBalanceCacheL1`
+   Add frequency-aware admission and better memory efficiency.
+4. Redis L2
+   Add shared cross-instance cache while keeping the same version semantics.
