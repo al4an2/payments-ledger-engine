@@ -30,3 +30,13 @@ The design treats the following risks as important:
 - partial failure between ledger mutation and idempotency completion
 - non-deterministic replay result for the same idempotency key
 - broken business invariants, for example invalid amount handling or debit below allowed limits
+- inconsistent ledger rows where `entry_type` and stored `amount` do not describe the same effect
+
+## Designs
+
+The current ledger storage model keeps `amount` as a signed value:
+- `CREDIT` entries are stored with positive `amount`
+- `DEBIT` entries are stored with negative `amount`
+
+This allows balance reads to use a simple `SUM(amount)` query. The operation type is still kept
+in `entry_type`, so the database can validate that the stored sign and the entry type agree.

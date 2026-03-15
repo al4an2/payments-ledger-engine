@@ -43,6 +43,7 @@ Planned database schema: `db_schema.md`.
 
 ## What Exists Today
 - Postgres runs via Docker Compose for local development.
+- The database layer now enforces key invariants with explicit check constraints.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
 - Idempotency flow via repo adapter (reserve/complete) stores response payloads for exact retries.
@@ -50,6 +51,7 @@ Planned database schema: `db_schema.md`.
 - Application returns a typed `PaymentResult` DTO; idempotency stores `COMPLETED`/`FAILED` outcomes.
 - Idempotency keys have `expires_at` TTL; completed keys are always replayed, in‑progress keys can expire.
 - Ledger domain rules (debit/credit, limits) implemented; SQL adapter supports lock/get_balance/insert/update.
+- Ledger entries store signed balance effect in `amount`: `CREDIT` is positive, `DEBIT` is negative, so balance reads use `SUM(amount)`.
 - Account version update supports optimistic guard (`expected_ledger_version`) for safer concurrent write detection.
 - Payments service orchestrates idempotency + ledger write path integration.
 - `/balance` read path uses an initial in-process versioned L1 cache (`VersionedMapCache`) with `ledger_version` freshness checks and miss -> DB -> cache fill behavior.

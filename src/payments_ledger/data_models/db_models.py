@@ -6,6 +6,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     UniqueConstraint,
+    CheckConstraint,
     Integer,
     text,
 )
@@ -58,6 +59,18 @@ class Client(Base):
 class Account(Base):
     __tablename__ = "accounts"
 
+    __table_args__ = (
+        CheckConstraint(
+            "credit_limit IS NULL OR credit_limit >= 0",
+            name="ck_accounts_credit_limit_non_negative",
+        ),
+        CheckConstraint(
+            "(balance_type = 'DEBIT_ONLY' AND credit_limit IS NULL) OR "
+            "(balance_type = 'CREDIT_ALLOWED' AND credit_limit IS NOT NULL)",
+            name="ck_accounts_balance_type_credit_limit",
+        ),
+    )
+
     account_id: Mapped[str] = mapped_column(String, primary_key=True)
     client_id: Mapped[str] = mapped_column(String, ForeignKey("clients.client_id"), nullable=False)
     ledger_version: Mapped[int] = mapped_column(
@@ -83,7 +96,13 @@ class Account(Base):
 
 class LedgerEntry(Base):
     __tablename__ = "ledger_entries"
-    __table_args__ = (UniqueConstraint("account_id", "ledger_version"),)
+    __table_args__ = (
+        UniqueConstraint("account_id", "ledger_version"),
+        CheckConstraint(
+            "(entry_type = 'DEBIT' AND amount < 0) OR (entry_type = 'CREDIT' AND amount > 0)",
+            name="ck_ledger_entries_entry_type_amount_sign",
+        ),
+    )
 
     entry_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     account_id: Mapped[str] = mapped_column(

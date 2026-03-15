@@ -1,5 +1,12 @@
 # Changelog
 
+## v 0.1.1 - 2026-03-15
+- Repaired the older Alembic nullability migration to safely handle existing `NULL` values before applying stricter `NOT NULL` constraints.
+- Added a new Alembic migration for database-level check constraints on `accounts` and `ledger_entries`.
+- Added ORM-level `CheckConstraint` definitions for account configuration and ledger entry sign consistency.
+- Tightened schema correctness so key invariants are enforced not only in application code and docs, but also in the database.
+
+
 ## v 0.1.0 - 2026-03-10
 - Added initial in-process L1 balance cache (`VersionedMapCache`) and wired it into the `/balance` read path (`cache hit -> return`, `cache miss -> DB -> cache fill`).
 - Refined cache contracts by splitting cache write input from stored cache entry (`BalanceCacheWriteData`, `BalanceCachedData`) and moving `updated_at_ts_ms` generation into cache adapters.
