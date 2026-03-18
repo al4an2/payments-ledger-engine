@@ -46,15 +46,31 @@ After a successful `process_payment`:
 - `accounts.ledger_version` increments.
 - Any older cached balance becomes stale by definition.
 
-The current implementation does not yet actively refresh or invalidate L1 on writes.
 Freshness is still preserved because reads validate against the latest account version.
 
 ## Evolution Path
 1. `VersionedMapCache`
-   Current baseline implementation for correctness and integration.
-2. Bounded L1
-   Add eviction mechanics (`LRU` / segmented cache) without changing the service contract.
+   Baseline implementation for correctness and integration.
+2. `SLRUBalanceCacheL1`
+   Add eviction mechanics (`SLRU`) without changing the service contract.
 3. `WTinyLFUBalanceCacheL1`
    Add frequency-aware admission and better memory efficiency.
 4. Redis L2
    Add shared cross-instance cache while keeping the same version semantics.
+
+## SLRU Behavior
+`SLRUBalanceCacheL1`: It keeps the same version contract and changes only
+the in-memory retention policy.
+
+- A new key is inserted into the front of the `probation` segment.
+- A fresh hit in `probation` promotes the entry to the front of `protected`.
+- A fresh hit in `protected` moves the entry to the front of `protected`.
+- If `protected` overflows, its tail is demoted to the front of `probation`.
+- If `probation` overflows, its tail is evicted from L1.
+- If `cached.ledger_version < expected_version`, return miss and remove the stale node.
+- If `cached.ledger_version > expected_version`, return miss without removing the node.
+- `put(...)` with an older version is ignored.
+- `put(...)` with the same or newer version updates the cached value and is treated as access.
+
+This stage is intentionally simpler than `W-TinyLFU`: it adds segmented retention and
+promotion/demotion behavior first, before adding a window segment and frequency-based admission.

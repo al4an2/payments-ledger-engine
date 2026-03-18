@@ -121,6 +121,11 @@ class SLRUBalanceCacheL1:
         self._protected_cache = _RecencyList()
         self._probation_cache = _RecencyList()
 
+        if self._protected_capacity < 1:
+            raise ValueError("Minimal protected_capacity size = 1")
+        if self._probation_capacity < 1:
+            raise ValueError("Minimal probation_capacity size = 1")
+
     async def get_if_fresh(
         self, account_id: str, currency: str, expected_version: int
     ) -> BalanceCachedData | None:
