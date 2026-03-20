@@ -1,22 +1,6 @@
 import pytest
 
 from payments_ledger.adapters.cache.versioned_map_cache import VersionedMapCache
-from payments_ledger.services.ports import BalanceCacheWriteData
-
-
-def _item(
-    *,
-    account_id: str = "acc_1",
-    currency: str = "EUR",
-    balance: int = 100,
-    ledger_version: int,
-) -> BalanceCacheWriteData:
-    return BalanceCacheWriteData(
-        account_id=account_id,
-        currency=currency,
-        balance=balance,
-        ledger_version=ledger_version,
-    )
 
 
 @pytest.mark.asyncio
@@ -33,9 +17,11 @@ async def test_get_if_fresh_returns_none_for_missing_key():
 
 
 @pytest.mark.asyncio
-async def test_put_then_get_if_fresh_returns_item_for_exact_version():
+async def test_put_then_get_if_fresh_returns_item_for_exact_version(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
-    item = _item(ledger_version=3, balance=250)
+    item = balance_cache_item_factory(ledger_version=3, balance=250)
 
     await cache.put(item)
 
@@ -54,9 +40,11 @@ async def test_put_then_get_if_fresh_returns_item_for_exact_version():
 
 
 @pytest.mark.asyncio
-async def test_get_if_fresh_returns_none_and_invalidates_when_cached_version_is_older():
+async def test_get_if_fresh_returns_none_and_invalidates_when_cached_version_is_older(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
-    item = _item(ledger_version=2)
+    item = balance_cache_item_factory(ledger_version=2)
 
     await cache.put(item)
 
@@ -77,9 +65,11 @@ async def test_get_if_fresh_returns_none_and_invalidates_when_cached_version_is_
 
 
 @pytest.mark.asyncio
-async def test_get_if_fresh_returns_none_when_cached_version_is_newer():
+async def test_get_if_fresh_returns_none_when_cached_version_is_newer(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
-    item = _item(ledger_version=5)
+    item = balance_cache_item_factory(ledger_version=5)
 
     await cache.put(item)
 
@@ -93,11 +83,13 @@ async def test_get_if_fresh_returns_none_when_cached_version_is_newer():
 
 
 @pytest.mark.asyncio
-async def test_put_does_not_overwrite_newer_version_with_older_one():
+async def test_put_does_not_overwrite_newer_version_with_older_one(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(ledger_version=5, balance=500))
-    await cache.put(_item(ledger_version=4, balance=400))
+    await cache.put(balance_cache_item_factory(ledger_version=5, balance=500))
+    await cache.put(balance_cache_item_factory(ledger_version=4, balance=400))
 
     result = await cache.get_if_fresh(
         account_id="acc_1",
@@ -111,9 +103,11 @@ async def test_put_does_not_overwrite_newer_version_with_older_one():
 
 
 @pytest.mark.asyncio
-async def test_invalidate_removes_item():
+async def test_invalidate_removes_item(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
-    item = _item(ledger_version=1)
+    item = balance_cache_item_factory(ledger_version=1)
 
     await cache.put(item)
     await cache.invalidate(account_id="acc_1", currency="EUR")
@@ -128,11 +122,13 @@ async def test_invalidate_removes_item():
 
 
 @pytest.mark.asyncio
-async def test_put_overwrites_with_newer_version():
+async def test_put_overwrites_with_newer_version(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(balance=100, ledger_version=3))
-    await cache.put(_item(balance=250, ledger_version=4))
+    await cache.put(balance_cache_item_factory(balance=100, ledger_version=3))
+    await cache.put(balance_cache_item_factory(balance=250, ledger_version=4))
 
     result = await cache.get_if_fresh(
         account_id="acc_1",
@@ -146,11 +142,13 @@ async def test_put_overwrites_with_newer_version():
 
 
 @pytest.mark.asyncio
-async def test_put_overwrites_same_version():
+async def test_put_overwrites_same_version(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(balance=100, ledger_version=3))
-    await cache.put(_item(balance=250, ledger_version=3))
+    await cache.put(balance_cache_item_factory(balance=100, ledger_version=3))
+    await cache.put(balance_cache_item_factory(balance=250, ledger_version=3))
 
     result = await cache.get_if_fresh(
         account_id="acc_1",
@@ -165,10 +163,12 @@ async def test_put_overwrites_same_version():
 
 
 @pytest.mark.asyncio
-async def test_stale_older_entry_is_removed_after_miss():
+async def test_stale_older_entry_is_removed_after_miss(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(balance=100, ledger_version=2))
+    await cache.put(balance_cache_item_factory(balance=100, ledger_version=2))
 
     result = await cache.get_if_fresh(
         account_id="acc_1",
@@ -188,10 +188,12 @@ async def test_stale_older_entry_is_removed_after_miss():
 
 
 @pytest.mark.asyncio
-async def test_newer_cached_entry_returns_miss_but_stays_in_cache():
+async def test_newer_cached_entry_returns_miss_but_stays_in_cache(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(balance=500, ledger_version=5))
+    await cache.put(balance_cache_item_factory(balance=500, ledger_version=5))
 
     older_expected = await cache.get_if_fresh(
         account_id="acc_1",
@@ -213,12 +215,26 @@ async def test_newer_cached_entry_returns_miss_but_stays_in_cache():
 
 
 @pytest.mark.asyncio
-async def test_cache_keys_are_isolated_by_account_and_currency():
+async def test_cache_keys_are_isolated_by_account_and_currency(
+    balance_cache_item_factory,
+):
     cache = VersionedMapCache()
 
-    await cache.put(_item(account_id="acc_1", currency="EUR", balance=100, ledger_version=1))
-    await cache.put(_item(account_id="acc_1", currency="USD", balance=200, ledger_version=1))
-    await cache.put(_item(account_id="acc_2", currency="EUR", balance=300, ledger_version=1))
+    await cache.put(
+        balance_cache_item_factory(
+            account_id="acc_1", currency="EUR", balance=100, ledger_version=1
+        )
+    )
+    await cache.put(
+        balance_cache_item_factory(
+            account_id="acc_1", currency="USD", balance=200, ledger_version=1
+        )
+    )
+    await cache.put(
+        balance_cache_item_factory(
+            account_id="acc_2", currency="EUR", balance=300, ledger_version=1
+        )
+    )
 
     eur_acc1 = await cache.get_if_fresh("acc_1", "EUR", expected_version=1)
     usd_acc1 = await cache.get_if_fresh("acc_1", "USD", expected_version=1)

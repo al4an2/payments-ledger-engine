@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from payments_ledger.services.ports import BalanceCachedData, BalanceCacheWriteData
 from dataclasses import dataclass
 from typing import Literal
+from payments_ledger.services.ports import BalanceCachedData, BalanceCacheWriteData
 from payments_ledger.adapters.cache.shared_layer import build_balance_cache_key, to_cached_data
 
 # from payments_ledger.adapters.cache.shared_layer import build_balance_cache_key
@@ -82,7 +82,7 @@ class _RecencyList:
 
     def move_to_front(self, node: _Node) -> None:
         if node is self._head:
-            return None
+            return
 
         self.remove(node)
         self.append_front(node)
@@ -132,7 +132,17 @@ class SLRUBalanceCacheL1:
             raise ValueError("Minimal probation_capacity size = 1")
 
     def _remove_node(self, node: _Node) -> None:
-        pass
+        goal_node = self._nodes.get(node.key)
+
+        if goal_node is not node:
+            raise RuntimeError("node is out of sync with cache segments")
+
+        if node.segment == "probation":
+            self._probation_cache.remove(node)
+        else:
+            self._protected_cache.remove(node)
+
+        del self._nodes[node.key]
 
     def _touch(self, node: _Node) -> None:
         if node.segment == "probation":
@@ -156,10 +166,12 @@ class SLRUBalanceCacheL1:
         if len(self._protected_cache) > self._protected_capacity:
             tail_node = self._protected_cache.pop_tail()
 
-            if tail_node:
-                tail_node.segment = "probation"
-                self._probation_cache.append_front(tail_node)
-                self._evict_probation_tail_if_needed()
+            if tail_node is None:
+                raise RuntimeError("protected overflow had no tail")
+
+            tail_node.segment = "probation"
+            self._probation_cache.append_front(tail_node)
+            self._evict_probation_tail_if_needed()
 
     def _promote_to_protected(self, node: _Node) -> None:
         self._probation_cache.remove(node)
@@ -171,7 +183,25 @@ class SLRUBalanceCacheL1:
     async def get_if_fresh(
         self, account_id: str, currency: str, expected_version: int
     ) -> BalanceCachedData | None:
-        pass
+        async with self._lock:
+            key = build_balance_cache_key(account_id=account_id, currency=currency)
+
+            cached = self._nodes.get(key)
+
+            if cached is None:
+                return None
+
+            cached_version = cached.value.ledger_version
+
+            if expected_version > cached_version:
+                self._remove_node(cached)
+                return None
+
+            if expected_version < cached_version:
+                return None
+
+            self._touch(node=cached)
+            return cached.value
 
     async def put(self, item: BalanceCacheWriteData) -> None:
         async with self._lock:
@@ -182,7 +212,7 @@ class SLRUBalanceCacheL1:
                 return
 
             data = to_cached_data(item)
-            if not cached:
+            if cached is None:
                 new_node = _Node(key=new_key, value=data, segment="probation")
                 self._probation_cache.append_front(new_node)
                 self._nodes[new_key] = new_node
@@ -193,4 +223,8 @@ class SLRUBalanceCacheL1:
                 self._touch(cached)
 
     async def invalidate(self, account_id: str, currency: str) -> None:
-        pass
+        async with self._lock:
+            key = build_balance_cache_key(account_id=account_id, currency=currency)
+            cached = self._nodes.get(key)
+            if cached:
+                self._remove_node(cached)
