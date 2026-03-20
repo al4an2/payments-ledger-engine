@@ -66,4 +66,4 @@ For this project, the staged approach is better than jumping to the final algori
 - each cache stage remains understandable on its own
 - the public service contract stays stable while only the adapter changes
 - tests can prove behavior incrementally
-- the repository shows the design evolution clearly, which is useful for a portfolio project
+- the repository shows the design evolution clearly

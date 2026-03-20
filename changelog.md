@@ -1,5 +1,11 @@
 # Changelog
 
+## v 0.1.2 - 2026-03-20
+- Added `SLRUBalanceCacheL1` as the active in-process L1 cache for `/balance`, replacing `VersionedMapCache` as the wired runtime implementation.
+- Added segmented retention behavior for L1 cache entries: `probation`, `protected`, promotion on hit, demotion on protected overflow, and probation-tail eviction.
+- Kept the service-facing cache contract stable while evolving the L1 adapter from the earlier `VersionedMapCache` baseline to `SLRU`.
+- Updated `README.md`, `docs/cache_versioning.md`, and `docs/architecture.md` to reflect the integrated `SLRU` read path
+
 ## v 0.1.1 - 2026-03-15
 - Repaired the older Alembic nullability migration to safely handle existing `NULL` values before applying stricter `NOT NULL` constraints.
 - Added a new Alembic migration for database-level check constraints on `accounts` and `ledger_entries`.

@@ -50,8 +50,11 @@ The API layer calls service functions through ports and a Unit of Work.
 1. API validates input and resolves `client_id`.
 2. API calls `balance_process(...)`.
 3. Service verifies account ownership (`account_id + client_id`).
-4. Service calculates balance from ledger entries.
-5. API returns `OK` or `FAILED` contract.
+4. Service reads `accounts.ledger_version` from the account snapshot.
+5. Service asks the in-process L1 cache for an exact-version hit.
+6. On L1 hit, the cached balance is returned immediately.
+7. On miss, service calculates balance from ledger entries and fills L1.
+8. API returns `OK` or `FAILED` contract.
 
 ### 3.3 `GET /accounts/{account_id}`
 
@@ -74,6 +77,14 @@ Current write path guarantees:
 - monotonic account version updates,
 - idempotent retry behavior through stored response payloads.
 
+Current read-cache guarantees:
+
+- `/balance` uses an in-process L1 cache behind the `BalanceCacheL1` port.
+- A cache hit is valid only when `cached.ledger_version == expected_version`.
+- Older cached versions are treated as stale and removed.
+- Newer cached versions are treated as misses without invalidation.
+- The currently wired implementation is `SLRUBalanceCacheL1`.
+
 ## 5) Error and Contract Strategy
 
 - Domain/application errors are returned as business `FAILED` responses where expected.
@@ -95,5 +106,6 @@ Integration tests share DB seed fixtures via `tests/integration/conftest.py`.
 
 ## 7) Not Yet Implemented
 
-- Versioned cache read path (`L1 in-process + L2 Redis`) is planned but not integrated yet.
+- Redis-backed L2 cache is still planned and not integrated yet.
+- `WTinyLFU`-based L1 is still planned and not integrated yet.
 - Load generator (Go) is planned as a separate workload/testing component.
