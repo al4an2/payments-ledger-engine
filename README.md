@@ -6,7 +6,7 @@ Work in progress — this project demonstrates an approach to **payments / infra
 
 ---
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, `SLRUBalanceCacheL1` wired into `/balance`, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
+**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, `WTinyLFUBalanceCacheL1` wired into `/balance`, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
 
 ## Project Goal
 
@@ -16,8 +16,8 @@ Build a service that:
 - Maintains an **append-only ledger**.
 - Supports **idempotency** for requests.
 - Uses **versioned cache** to speed up reads.
-- Current implementation: L1 in-process cache for `/balance`.
-- Planned next: `WTinyLFU`-style L1 and Redis L2.
+- Current implementation: `WTinyLFUBalanceCacheL1` in-process cache for `/balance`.
+- Planned next: Redis L2.
 - Provides APIs for balances and payments.
 
 This project demonstrates:
@@ -55,8 +55,8 @@ Planned database schema: `db_schema.md`.
 - Account version update supports optimistic guard (`expected_ledger_version`) for safer concurrent write detection.
 - Payments service orchestrates idempotency + ledger write path integration.
 - Cache contracts separate write input from stored cache entry (`BalanceCacheWriteData` vs `BalanceCachedData`), so adapters own cache metadata such as `updated_at_ts_ms`.
-- `/balance` read path uses an in-process segmented L1 cache (`SLRUBalanceCacheL1`) with `ledger_version` freshness checks and miss -> DB -> cache fill behavior.
-- `VersionedMapCache` remains in the repository as the earlier correctness-first L1 baseline that preceded the current segmented `SLRU` adapter.
+- `/balance` read path uses an in-process `WTinyLFUBalanceCacheL1` with `window` / `probation` / `protected` segments, sketch-based admission, `ledger_version` freshness checks, and miss -> DB -> cache fill behavior.
+- `SLRUBalanceCacheL1` remains in the repository as the earlier segmented L1 stage, and `VersionedMapCache` remains as the initial correctness-first baseline.
 - FastAPI app with auth repo (API key → client_id) and PaymentRequest/PaymentResponse schemas.
 - Account info read path (`/accounts/{account_id}`) returns account configuration (`balance_type`, `credit_limit`) with tenant isolation.
 - API response schemas use stricter literal status/value contracts for read/write endpoints.
@@ -64,12 +64,12 @@ Planned database schema: `db_schema.md`.
 
 ## Cache Status
 - Implemented now:
-  - segmented in-process L1 cache (`SLRUBalanceCacheL1`) for `GET /balance`
+  - `W-TinyLFU`-style in-process L1 cache (`WTinyLFUBalanceCacheL1`) for `GET /balance`
   - exact version-match freshness checks via `accounts.ledger_version`
-  - `probation` / `protected` retention behavior inside the active L1 adapter
-  - unit/application/API coverage for base cache semantics and cache-hit read path
+  - `window` / `probation` / `protected` retention behavior inside the active L1 adapter
+  - `_FrequencySketch`-based admission with saturating counters and periodic aging
+  - unit coverage for `WTinyLFUBalanceCacheL1` behavior, plus retained coverage for earlier cache stages
 - Planned next:
-  - `WTinyLFU`-based L1
   - Redis L2
 
 ## Local Setup
