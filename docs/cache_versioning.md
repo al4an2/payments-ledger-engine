@@ -75,3 +75,17 @@ the in-memory retention policy.
 
 This stage is intentionally simpler than `W-TinyLFU`: it adds segmented retention and
 promotion/demotion behavior first, before adding a window segment and frequency-based admission.
+
+## W-TinyLFU Sketch Decisions
+The next `WTinyLFUBalanceCacheL1` stage introduces a separate `_FrequencySketch` for admission
+decisions. The current design choices are:
+
+- frequency is tracked in a compact Count-Min-style counter table, not as exact per-key counts
+- the sketch currently uses four fixed seeds inspired by the Caffeine implementation
+- width is validated as a power of two so bucket indexing can use a bit mask
+- counters are saturating (`max_counter = 15`) instead of growing without bound
+- counters are periodically halved to age old hot keys and keep the sketch adaptive
+
+This keeps frequency estimation separate from cache segments:
+- `window` / `probation` / `protected` keep recency and retention state
+- `_FrequencySketch` provides approximate popularity estimates for candidate-vs-victim admission

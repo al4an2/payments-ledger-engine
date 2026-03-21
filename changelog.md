@@ -2,6 +2,8 @@
 
 ## v 0.1.3 - 2026-03-21
 - Expanded tests for `SLRUBalanceCacheL1`
+- Started the `WTinyLFUBalanceCacheL1` implementation by introducing an initial `_FrequencySketch` design.
+- Chose a compact Count-Min-style sketch with four fixed Caffeine-inspired seeds, power-of-two width validation, saturating counters, and periodic halving reset for aging.
 
 ## v 0.1.2 - 2026-03-20
 - Added `SLRUBalanceCacheL1` as the active in-process L1 cache for `/balance`, replacing `VersionedMapCache` as the wired runtime implementation.
