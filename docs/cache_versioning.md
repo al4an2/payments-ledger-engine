@@ -81,11 +81,25 @@ The next `WTinyLFUBalanceCacheL1` stage introduces a separate `_FrequencySketch`
 decisions. The current design choices are:
 
 - frequency is tracked in a compact Count-Min-style counter table, not as exact per-key counts
-- the sketch currently uses four fixed seeds inspired by the Caffeine implementation
+- the sketch defaults to four seeds inspired by the Caffeine implementation, while still allowing seed override for experimentation
 - width is validated as a power of two so bucket indexing can use a bit mask
-- counters are saturating (`max_counter = 15`) instead of growing without bound
+- counters are saturating, with the default `max_counter = 15` chosen in the spirit of the compact Caffeine sketch
 - counters are periodically halved to age old hot keys and keep the sketch adaptive
 
 This keeps frequency estimation separate from cache segments:
 - `window` / `probation` / `protected` keep recency and retention state
 - `_FrequencySketch` provides approximate popularity estimates for candidate-vs-victim admission
+
+## W-TinyLFU Capacity Split
+The current `WTinyLFUBalanceCacheL1` design treats `window` as a front-door segment that is carved out before the main `SLRU` area:
+
+- `window_capacity` is derived from total `capacity` using `window_ratio`
+- `window` is clamped to at least one slot so admission always has a real staging area
+- `main_capacity = capacity - window_capacity`
+- `protected_ratio` is applied to `main_capacity`, not to the full cache size
+- `probation_capacity` is the remainder of `main_capacity` after `protected_capacity`
+
+This keeps the total bounded by the configured cache capacity while making the role of each segment
+explicit:
+- `window` handles short-term admission for new entries
+- `probation` and `protected` remain the retained main-cache area

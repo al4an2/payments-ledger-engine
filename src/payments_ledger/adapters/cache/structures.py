@@ -114,3 +114,9 @@ class _RecencyList:
         node.next = None
         self._size -= 1
         return node
+
+    def peek_tail(self) -> _Node | None:
+        if self._tail is None:
+            return None
+
+        return self._tail
