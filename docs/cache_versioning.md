@@ -76,15 +76,27 @@ the in-memory retention policy.
 This stage is intentionally simpler than `W-TinyLFU`: it adds segmented retention and
 promotion/demotion behavior first, before adding a window segment and frequency-based admission.
 
+## W-TinyLFU Behavior
+- A new key is inserted into the front of `window`.
+- A fresh hit in `window` refreshes recency inside `window` only.
+- If `window` overflows, its tail becomes the admission candidate.
+- If `probation` has free space, the candidate is inserted into `probation`.
+- If `probation` is full, the candidate is compared with the `probation` tail victim by sketch estimate.
+- The candidate is admitted only when `candidate_frequency > victim_frequency`.
+- Equal frequency rejects the candidate and keeps the victim.
+- A fresh hit in `probation` promotes the entry to `protected`.
+- A fresh hit in `protected` refreshes recency inside `protected`.
+- If `protected` overflows, its tail is demoted to the front of `probation`.
+
 ## W-TinyLFU Sketch Decisions
-The next `WTinyLFUBalanceCacheL1` stage introduces a separate `_FrequencySketch` for admission
-decisions. The current design choices are:
+The `WTinyLFUBalanceCacheL1` stage uses a separate `_FrequencySketch` for admission decisions. The current design choices are:
 
 - frequency is tracked in a compact Count-Min-style counter table, not as exact per-key counts
 - the sketch defaults to four seeds inspired by the Caffeine implementation, while still allowing seed override for experimentation
 - width is validated as a power of two so bucket indexing can use a bit mask
 - counters are saturating, with the default `max_counter = 15` chosen in the spirit of the compact Caffeine sketch
 - counters are periodically halved to age old hot keys and keep the sketch adaptive
+- admission policy: admit the candidate only when `candidate_frequency > victim_frequency`; equal frequency rejects the candidate
 
 This keeps frequency estimation separate from cache segments:
 - `window` / `probation` / `protected` keep recency and retention state
