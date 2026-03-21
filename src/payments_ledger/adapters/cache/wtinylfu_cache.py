@@ -3,7 +3,7 @@ from __future__ import annotations
 # import asyncio
 
 from payments_ledger.services.ports import BalanceCachedData, BalanceCacheWriteData
-# from payments_ledger.adapters.cache.structures import _Node, _RecencyList
+from payments_ledger.adapters.cache.structures import _Node
 # from payments_ledger.adapters.cache.shared_layer import build_balance_cache_key
 
 _BASE_SEEDS: tuple[int, ...] = (
@@ -74,6 +74,18 @@ class WTinyLFUBalanceCacheL1:
         self,
         capacity: int,
     ) -> None:
+        pass
+
+    def _insert_new_into_window(self, node: _Node) -> None:
+        pass
+
+    def _admit_window_candidate(self, candidate: _Node) -> None:
+        pass
+
+    def _insert_into_probation(self, node: _Node) -> None:
+        pass
+
+    def _touch_window(self, node) -> None:
         pass
 
     async def get_if_fresh(
