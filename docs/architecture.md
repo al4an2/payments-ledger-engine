@@ -83,7 +83,7 @@ Current read-cache guarantees:
 - A cache hit is valid only when `cached.ledger_version == expected_version`.
 - Older cached versions are treated as stale and removed.
 - Newer cached versions are treated as misses without invalidation.
-- The currently wired implementation is `SLRUBalanceCacheL1`.
+- The currently wired implementation is `WTinyLFUBalanceCacheL1`.
 
 ## 5) Error and Contract Strategy
 

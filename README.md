@@ -1,32 +1,41 @@
 # Payments Ledger Engine
 
-**Production-like payments ledger with idempotency and versioned cache.**  
+**Correctness-focused payments backend with idempotent writes, append-only ledger accounting, and version-aware balance caching.**
 
-Work in progress — this project demonstrates an approach to **payments / infrastructure / data-heavy** systems.
+## Why It Is Hard
+- Exactly-once-oriented payment handling under retries, duplicate requests, and concurrent callers.
+- Correct balance reads over append-only ledger history without serving stale cached versions.
+- Consistency across API contracts, service orchestration, database constraints, and cache admission/retention policy.
 
----
+## What this project demonstrates
 
-**Current status**: Core API + idempotency flow working, `/balance` and `/accounts` read paths implemented, `WTinyLFUBalanceCacheL1` wired into `/balance`, DI providers centralized in `api/deps.py`, `Idempotency-Key` validation added, optimistic account version guard introduced, API and integration test coverage expanded
+- Designing correctness-sensitive write paths with transactional boundaries
+- Handling retries, duplicate requests, and stale-cache reads safely
+- Evolving internal architecture while preserving API and data invariants
 
-## Project Goal
+## What Is Already Proven
+- `/payments`, `/balance`, and `/accounts` flows are implemented with FastAPI, SQLAlchemy, and an explicit Unit of Work boundary.
+- `WTinyLFUBalanceCacheL1` is wired into `/balance` with `window` / `probation` / `protected` segments and `ledger_version`-based freshness checks.
+- Unit, integration, and API tests cover cache semantics, idempotency flow, DB constraints, and read/write contract behavior.
 
-Build a service that:
+## System Sketch
+```text
+POST /payments
+  -> idempotency reserve / replay
+  -> append-only ledger write
+  -> account.ledger_version increments
 
-- Processes payments with **exactly-once** semantics.
-- Maintains an **append-only ledger**.
-- Supports **idempotency** for requests.
-- Uses **versioned cache** to speed up reads.
-- Current implementation: `WTinyLFUBalanceCacheL1` in-process cache for `/balance`.
-- Planned next: Redis L2.
-- Provides APIs for balances and payments.
+GET /balance
+  -> WTinyLFU L1 fresh hit -> return
+  -> stale hit or miss -> Postgres SUM(amount) -> cache fill -> return
+```
 
-This project demonstrates:
-
-- Thoughtful **system design**
-- Safe handling of **stateful transactions**
-- **Correctness** under retries and race conditions
-
-Planned database schema: `db_schema.md`.
+## Failure Modes Covered
+- Duplicate payment requests via idempotency reserve / replay flow.
+- Stale cache entries removed on `accounts.ledger_version` mismatch.
+- Older cache writes rejected; newer cached values are not overwritten by stale data.
+- Optimistic account version guard for conflicting ledger updates.
+- Database check constraints for account configuration and signed ledger-entry invariants.
 
 ## Current State
 - Docs: `docs/db_schema.md`, `docs/design.md`, `docs/architecture.md`, `docs/cache_versioning.md`, `changelog.md`.

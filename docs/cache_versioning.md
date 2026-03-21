@@ -2,11 +2,11 @@
 
 ## Status
 Implemented now:
-- Active L1: in-process `SLRUBalanceCacheL1` wired into `GET /balance`.
-- Previous baseline L1: `VersionedMapCache`, kept as the earlier correctness-first stage.
+- Active L1: in-process `WTinyLFUBalanceCacheL1` wired into `GET /balance`.
+- Previous segmented L1 stage: `SLRUBalanceCacheL1`, kept in the repository as the earlier bounded/segmented implementation.
+- Earlier baseline L1: `VersionedMapCache`, kept as the initial correctness-first stage.
 
 Planned next:
-- L1: `WTinyLFUBalanceCacheL1`.
 - L2: Redis-backed shared cache.
 
 ## Context
@@ -53,9 +53,9 @@ Freshness is still preserved because reads validate against the latest account v
 1. `VersionedMapCache`
    Baseline implementation for correctness and integration.
 2. `SLRUBalanceCacheL1`
-   Active bounded/segmented L1 implementation with `probation` / `protected` retention.
+   Earlier bounded/segmented L1 stage with `probation` / `protected` retention.
 3. `WTinyLFUBalanceCacheL1`
-   Add frequency-aware admission and better memory efficiency.
+   Active in-process L1 with `window` / `probation` / `protected` retention and sketch-based admission.
 4. Redis L2
    Add shared cross-instance cache while keeping the same version semantics.
 
