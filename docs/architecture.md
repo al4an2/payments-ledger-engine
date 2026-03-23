@@ -30,6 +30,11 @@ The API layer calls service functions through ports and a Unit of Work.
   - `SqlAlchemyLedgerRepo`
   - `SqlAlchemyIdempotencyRepo`
   - `SqlAlchemyAuthRepo`
+- **Containerized local runtime**:
+  - `Dockerfile` builds the app image
+  - `docker-compose.yaml` runs `app + postgres`
+  - Postgres readiness is checked before the app starts
+  - the app container runs `alembic upgrade head` before `uvicorn`
 
 ## 3) Main Flows
 
@@ -107,5 +112,4 @@ Integration tests share DB seed fixtures via `tests/integration/conftest.py`.
 ## 7) Not Yet Implemented
 
 - Redis-backed L2 cache is still planned and not integrated yet.
-- `WTinyLFU`-based L1 is still planned and not integrated yet.
 - Load generator (Go) is planned as a separate workload/testing component.

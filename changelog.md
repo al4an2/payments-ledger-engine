@@ -1,5 +1,12 @@
 # Changelog
 
+## v 0.1.4 - 2026-03-23
+- Added a new Alembic forward migration to align DB-level defaults with the current ORM model for `accounts.ledger_version`, `clients.status`, and `created_at` columns.
+- Updated Alembic autogeneration config to compare both column types and `server_default`, so future ORM-vs-schema drift is caught earlier.
+- Added containerized service runtime: the FastAPI app now builds from `Dockerfile` and runs together with Postgres via `docker-compose.yaml`.
+- Added Postgres readiness checks and app startup wiring so the containerized service applies migrations before starting `uvicorn`.
+- Updated docs to reflect the Alembic default-alignment fix and the containerized app + Postgres local runtime.
+
 ## v 0.1.3 - 2026-03-21
 - Expanded tests for `SLRUBalanceCacheL1`
 - Implemented `WTinyLFUBalanceCacheL1` and wired it into `/balance` as the active in-process L1 cache, replacing `SLRUBalanceCacheL1` as the runtime adapter.

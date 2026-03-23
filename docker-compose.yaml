@@ -15,6 +15,24 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-  
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payments_ledger_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_HOST: postgres
+        POSTGRES_PORT: "${POSTGRES_PORT}"
+        POSTGRES_DB: postgres
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "uv run alembic upgrade head &&
+             uv run uvicorn payments_ledger.api.main:app --host 0.0.0.0 --port 8000 --app-dir src"  
 volumes:
   pgdata:

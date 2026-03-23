@@ -39,7 +39,7 @@ GET /balance
 
 ## Current State
 - Docs: `docs/db_schema.md`, `docs/design.md`, `docs/architecture.md`, `docs/cache_versioning.md`, `changelog.md`.
-- Infrastructure: `docker-compose.yaml`, `.env`.
+- Infrastructure: `Dockerfile`, `docker-compose.yaml`, `.env`.
 - API: FastAPI app with `/health`, `/balance/{account_id}` (currency query), `/accounts/{account_id}`, `/payments` (explicit `direction`).
 - API dependencies: centralized providers in `src/payments_ledger/api/deps.py` (`get_uow`, `get_client_id`).
 - Application: payment orchestration + idempotency reserve/complete via ports.
@@ -51,7 +51,8 @@ GET /balance
 - Tooling: `pyproject.toml`, `uv.lock` (ruff, mypy, bandit).
 
 ## What Exists Today
-- Postgres runs via Docker Compose for local development.
+- The service can run either directly via `uvicorn` or as a containerized app with Postgres via Docker Compose.
+- The app container applies `alembic upgrade head` before starting `uvicorn`, so local containerized startup keeps schema and runtime aligned.
 - The database layer now enforces key invariants with explicit check constraints.
 - SQLAlchemy ORM models cover clients, accounts, ledger entries, and idempotency keys.
 - Async DB session setup + config helpers for DB URLs.
@@ -63,6 +64,7 @@ GET /balance
 - Ledger entries store signed balance effect in `amount`: `CREDIT` is positive, `DEBIT` is negative, so balance reads use `SUM(amount)`.
 - Account version update supports optimistic guard (`expected_ledger_version`) for safer concurrent write detection.
 - Payments service orchestrates idempotency + ledger write path integration.
+- Alembic history now includes a forward migration that aligns DB-level defaults with current ORM expectations for `ledger_version`, `status`, and `created_at`.
 - Cache contracts separate write input from stored cache entry (`BalanceCacheWriteData` vs `BalanceCachedData`), so adapters own cache metadata such as `updated_at_ts_ms`.
 - `/balance` read path uses an in-process `WTinyLFUBalanceCacheL1` with `window` / `probation` / `protected` segments, sketch-based admission, `ledger_version` freshness checks, and miss -> DB -> cache fill behavior.
 - `SLRUBalanceCacheL1` remains in the repository as the earlier segmented L1 stage, and `VersionedMapCache` remains as the initial correctness-first baseline.
@@ -100,6 +102,11 @@ uv run alembic upgrade head
 4) Run API (development):
 ```bash
 uv run uvicorn payments_ledger.api.main:app --reload --app-dir src
+```
+
+Alternative: run app + Postgres in containers:
+```bash
+docker compose up --build
 ```
 
 5) Example requests:
