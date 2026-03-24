@@ -1,8 +1,11 @@
 # Changelog
 
+## v 0.1.5 - 2026-03-24
+- Added an app-level Docker Compose healthcheck against `/health` to make container readiness visible at the service layer.
+
 ## v 0.1.4 - 2026-03-23
 - Added a new Alembic forward migration to align DB-level defaults with the current ORM model for `accounts.ledger_version`, `clients.status`, and `created_at` columns.
-- Updated Alembic autogeneration config to compare both column types and `server_default`, so future ORM-vs-schema drift is caught earlier.
+- Updated Alembic autogeneration config to compare both column types and `server_default`
 - Added containerized service runtime: the FastAPI app now builds from `Dockerfile` and runs together with Postgres via `docker-compose.yaml`.
 - Added Postgres readiness checks and app startup wiring so the containerized service applies migrations before starting `uvicorn`.
 - Updated docs to reflect the Alembic default-alignment fix and the containerized app + Postgres local runtime.
